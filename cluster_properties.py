@@ -791,7 +791,7 @@ class LoadDumpfile:
     def __init__(self, group_dumpfile, subhalo_dumpfile, non_rad=False): 
         if os.path.exists(group_dumpfile):
             print("%s exists!" % (group_dumpfile))
-            df = open(group_dumpfile, 'r')
+            df = open(group_dumpfile, 'rb')
             if non_rad:                
                 (self.M500, self.M200, self.Mg500, self.vol_T500, self.mass_T500, self.vol_T500_with_core, self.mass_T500_with_core, self.Ysz_with_core, self.Ysz_no_core, self.Lx_with_core, self.Lx_no_core, self.vol_temp_profile, self.mass_temp_profile, self.density_profile, self.electron_pressure_profile, self.cum_fgas) = pickle.load(df)
             else:
@@ -804,7 +804,7 @@ class LoadDumpfile:
 
         if os.path.exists(subhalo_dumpfile):
             print("%s exists!" % (subhalo_dumpfile))
-            df = open(subhalo_dumpfile, 'r')
+            df = open(subhalo_dumpfile, 'rb')
             (self.sub_starmass) = pickle.load(df)
             df.close()
 
