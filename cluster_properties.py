@@ -1219,14 +1219,14 @@ class SimulationTesting:
             #    ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])    # This allows plotting of less models
             ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
 
-            if self.show_spread and self.models[rid] == "GR":
-                error_file = "/cosma7/data/dp004/dc-mitc2/hydro_analysis/obs_data/l302_gr_sfrd.pickle"
-                df = open(error_file, "r")
-                (jk_redshifts, jk_sfrd, jk_sfrd_errors) = pickle.load(df)
-                df.close()
+            #if self.show_spread and self.models[rid] == "GR":
+            #    error_file = "/cosma7/data/dp004/dc-mitc2/hydro_analysis/obs_data/l302_gr_sfrd.pickle"
+            #    df = open(error_file, "r")
+            #    (jk_redshifts, jk_sfrd, jk_sfrd_errors) = pickle.load(df)
+            #    df.close()
 
-                ax.plot(jk_redshifts, jk_sfrd, linewidth=self.lw, color='black')
-                ax.fill_between(jk_redshifts, (jk_sfrd - jk_sfrd_errors), (jk_sfrd + jk_sfrd_errors), facecolor=self.colors[rid], alpha=0.5)
+            #    ax.plot(jk_redshifts, jk_sfrd, linewidth=self.lw, color='black')
+            #    ax.fill_between(jk_redshifts, (jk_sfrd - jk_sfrd_errors), (jk_sfrd + jk_sfrd_errors), facecolor=self.colors[rid], alpha=0.5)
 
         ax.set_yscale('log')
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')

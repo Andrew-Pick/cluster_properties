@@ -10,7 +10,7 @@ sim_test = SimulationTesting(
             "L302-N1136-F50", "L302-N1136-F45", "L302-N1136-F40"],
     colors=["black","blue","magenta","green","orange","red"],
     defaults=[],
-    plot_name="cluster_comparison_allModels"
+    plot_name="cluster_comparison_allModels",
     show_spread=True
 )
 sim_test.tng_observables()   # generates summary comparison plots
