@@ -7,7 +7,7 @@ cp = ClusterProperties(
     snapshot=12,
     mass_cut=1e13,
     delta=500,
-    file_ending="highMass_paper",
+    file_ending="all",
     rescaling="true",
     core_frac=0.15
 )
