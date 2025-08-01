@@ -1202,8 +1202,8 @@ class SimulationTesting:
         sfrd_behroozi  = np.loadtxt('/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/obs_data/behroozi2013.txt')
         sfrd_TNG_L25_N128  = loadtxt('/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/obs_data/TNG_L25_N128_sfrd.txt')
         sfrd_TNG_L25_N512  = loadtxt('/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/obs_data/TNG_L25_N512_sfrd.txt')
-#        ax.scatter(sfrd_behroozi[:,0], sfrd_behroozi[:,1], color = 'dimgrey', marker = 'o', s = self.ms, label = r'Behroozi+2013')
-#        ax.plot(sfrd_TNG_L25_N512[:,0], sfrd_TNG_L25_N512[:,1], ls = '-.', linewidth = self.lw, color = 'black', label=r'TNG L25-N512')
+        ax.scatter(sfrd_behroozi[:,0], sfrd_behroozi[:,1], color = 'dimgrey', marker = 'o', s = self.ms, label = r'Behroozi+2013')
+        ax.plot(sfrd_TNG_L25_N512[:,0], sfrd_TNG_L25_N512[:,1], ls = '-.', linewidth = self.lw, color = 'black', label=r'TNG L25-N512')
 
         zbins = np.concatenate((np.linspace(0, 1, 20), np.logspace(0.01, 1, 70)))
 
@@ -1215,8 +1215,9 @@ class SimulationTesting:
             sfr, edges, binnum = stat.binned_statistic(z, sfr_data[:,3], bins=zbins, statistic = 'mean')   # mean sfr measured for each z bin
             redshifts = (edges[1:] + edges[:-1]) / 2.
             sfrd = sfr / (((self.s.header.boxsize/1000)/self.s.header.hubble)**3)   # star formation rate density in Msun yr^-1 Mpc^-3
-            if self.models[rid] == "GR":
-                ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
+            #if self.models[rid] == "GR":
+            #    ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
+	    ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
 
             if self.show_spread and self.models[rid] == "GR":
                 error_file = "/cosma7/data/dp004/dc-mitc2/hydro_analysis/obs_data/l302_gr_sfrd.pickle"
