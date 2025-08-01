@@ -11,5 +11,6 @@ sim_test = SimulationTesting(
     colors=["black","blue","magenta","green","orange","red"],
     defaults=[],
     plot_name="cluster_comparison_allModels"
+    show_spread=True
 )
 sim_test.tng_observables()   # generates summary comparison plots
