@@ -112,7 +112,7 @@ class ClusterProperties:
         self.simulation = simulation
         self.model = model
         self.snapshot = snapshot
-        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/%s/%s/" % (self.simulation,self.model)
+        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/%s/" % (self.simulation,self.model)
         self.realisation = realisation
         self.mass_cut = mass_cut
         self.delta = delta
