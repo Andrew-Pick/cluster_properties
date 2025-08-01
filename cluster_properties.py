@@ -1217,7 +1217,7 @@ class SimulationTesting:
             sfrd = sfr / (((self.s.header.boxsize/1000)/self.s.header.hubble)**3)   # star formation rate density in Msun yr^-1 Mpc^-3
             #if self.models[rid] == "GR":
             #    ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
-	    ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
+            ax.plot(redshifts, sfrd, linewidth=self.lw, color=self.colors[rid])
 
             if self.show_spread and self.models[rid] == "GR":
                 error_file = "/cosma7/data/dp004/dc-mitc2/hydro_analysis/obs_data/l302_gr_sfrd.pickle"
