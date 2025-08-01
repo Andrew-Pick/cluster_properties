@@ -949,7 +949,7 @@ class SimulationTesting:
         ax.set_xticklabels(r'')
         ax.set_xticks(np.logspace(11,15,5,base=10.0))
         ax.set_xticklabels([r'$10^{11}$',r'$10^{12}$',r'$10^{13}$',r'$10^{14}$','$10^{15}$'],fontsize=self.axsize)
-        [i.set_linewidth(1.5) for i in ax.spines.itervalues()]
+        [i.set_linewidth(1.5) for i in ax.spines.values()]
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc=2, fontsize=self.legsize, frameon=False)
@@ -1004,7 +1004,7 @@ class SimulationTesting:
         ax.set_xticklabels(r'')
         ax.set_xticks(np.logspace(12,15,4,base=10.0))
         ax.set_xticklabels([r'$10^{12}$',r'$10^{13}$',r'$10^{14}$',r'$10^{15}$'],fontsize=self.axsize)
-        [i.set_linewidth(1.5) for i in ax.spines.itervalues()]
+        [i.set_linewidth(1.5) for i in ax.spines.values()]
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc=1, fontsize=self.legsize, frameon=False)
@@ -1082,7 +1082,7 @@ class SimulationTesting:
         ax.set_xticklabels(r'')
         ax.set_xticks(np.logspace(10,12,3,base=10.0))
         ax.set_xticklabels([r'$10^{10}$',r'$10^{11}$','$10^{12}$'],fontsize=self.axsize)
-        [i.set_linewidth(1.5) for i in ax.spines.itervalues()]
+        [i.set_linewidth(1.5) for i in ax.spines.values()]
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         leg1 = ax.legend(loc=3, fontsize=self.legsize, frameon=False)
@@ -1134,7 +1134,7 @@ class SimulationTesting:
         ax.set_xticklabels(r'')
         ax.set_xticks(np.logspace(10,12,3,base=10.0))
         ax.set_xticklabels([r'$10^{10}$',r'$10^{11}$',r'$10^{12}$'],fontsize=self.axsize)
-        [i.set_linewidth(1.5) for i in ax.spines.itervalues()]
+        [i.set_linewidth(1.5) for i in ax.spines.values()]
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc=2, fontsize=self.legsize, frameon=False)
@@ -1190,7 +1190,7 @@ class SimulationTesting:
         ax.set_xticklabels(r'')
         ax.set_xticks(np.logspace(10,12,3,base=10.0))
         ax.set_xticklabels([r'$10^{10}$',r'$10^{11}$',r'$10^{12}$'],fontsize=self.axsize)
-        [i.set_linewidth(1.5) for i in ax.spines.itervalues()]
+        [i.set_linewidth(1.5) for i in ax.spines.values()]
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc=2, fontsize=self.legsize, frameon=False)
@@ -1237,7 +1237,7 @@ class SimulationTesting:
         ax.set_xticklabels(r'')
         ax.set_xticks(np.linspace(0,10,6))
         ax.set_xticklabels([r'$0$',r'$2$',r'$4$',r'$6$',r'$8$',r'$10$'],fontsize=self.axsize)
-        [i.set_linewidth(1.5) for i in ax.spines.itervalues()]
+        [i.set_linewidth(1.5) for i in ax.spines.values()]
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc=1, fontsize=self.legsize, frameon=False)
