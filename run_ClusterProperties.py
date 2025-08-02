@@ -2,7 +2,7 @@ from cluster_properties import ClusterProperties
 
 cp = ClusterProperties(
     simulation="L302_N1136",
-    model="GR",
+    model="F40",
     realisation="1",
     snapshot=12,
     mass_cut=1e13,
