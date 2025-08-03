@@ -861,7 +861,7 @@ class SimulationTesting:
         self.group_path = fd.group_path
         self.s = read_hdf5.snapshot(snapshot, directory=self.particle_path, dirbases=["snapdir_", ""], snapbases=["/GR_", "/gadget", "/snap_"], check_total_particle_number=True)
 
-        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/%s/" % (simulation)
+        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/" % (simulation)
         self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
         self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
 
