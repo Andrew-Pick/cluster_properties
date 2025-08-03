@@ -656,7 +656,7 @@ class ClusterProperties:
         median_r500 = np.median(np.log10(r500[bin_haloes]))
         mean_r500 = np.mean(np.log10(r500[bin_haloes]))
 
-        df = open(profile_dumpfile,"w+")
+        df = open(profile_dumpfile,"w+b")
         pickle.dump((self.bin_radii[:num_bins], av_t, av_t_pred, av_rho, av_rho_pred, av_pressure, median_r500, mean_r500), df)
         df.close()
 
