@@ -114,7 +114,7 @@ class ClusterProperties:
         self.model = model
         self.snapshot = snapshot
         self.fileroot = "/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/%s/%s/" % (self.simulation,self.model)
-        self.fileroot2 = "/cosma8/data/dp203/dc-feng4/data/"
+        self.fileroot2 = "/cosma8/data/dp203/dc-pick1/cluster_properties/plots/"
         self.realisation = realisation
         self.mass_cut = mass_cut
         self.delta = delta
@@ -861,7 +861,7 @@ class Scaling_Relation:
 #       self.s = read_hdf5.snapshot(snapshot, directory=self.particle_path, dirbases=["snapdir_", ""], snapbases=["/GR_", "/gadget", "/snap_"], check_total_particle_number=True)
 
         self.fileroot = "/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/%s/" % (simulation)
-        self.fileroot2 = "/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/%s/" % (simulation)
+        self.fileroot2 = "/cosma8/home/dp203/dc-pick1/cluster_properties/plots/%s/" % (simulation)
         self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
         self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
 
