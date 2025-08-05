@@ -852,13 +852,13 @@ class Scaling_Relation:
         self.show_spread = show_spread
 
         # load snapshot
-#       if simulation == "L302_N1136":
-#           if system[0] == "cosma7":
-#               fd = FindData(simulation,models[0],"Wind_1",snapshot,system=system[0])
-#
-#       self.particle_path = fd.particle_path
-#       self.group_path = fd.group_path
-#       self.s = read_hdf5.snapshot(snapshot, directory=self.particle_path, dirbases=["snapdir_", ""], snapbases=["/GR_", "/gadget", "/snap_"], check_total_particle_number=True)
+        if simulation == "L302_N1136":
+            if system[0] == "cosma7":
+                fd = FindData(simulation,models[0],"Wind_1",snapshot,system=system[0])
+
+        self.particle_path = fd.particle_path
+        self.group_path = fd.group_path
+        self.s = read_hdf5.snapshot(snapshot, directory=self.particle_path, dirbases=["snapdir_", ""], snapbases=["/GR_", "/gadget", "/snap_"], check_total_particle_number=True)
 
         self.fileroot = "/cosma8/data/dp203/bl267/Projects/Ongoing/Clusters/%s/" % (simulation)
         self.fileroot2 = "/cosma/home/dp203/dc-pick1/cluster_properties/plots/%s/" % (simulation)
