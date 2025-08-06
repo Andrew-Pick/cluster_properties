@@ -973,7 +973,23 @@ class Scaling_Relation:
 
             size = np.array([len(temp[digitized == i]) for i in range(1, len(bins))])
             self.size_gr = np.array([len(temp[digitized == i]) for i in range(1, len(bins))])       
-            
+            size_mask = size >= 5
+            mean_log_mass_main = mean_log_mass[size_mask]
+            median_temp_main1 = median_temp1[size_mask]
+            median_temp_rescaled_main1 = median_temp_rescaled1[mask]
+
+            # handle sparse high-mass bins separately
+            if np.any(~size_mask):  # there are sparse bins
+                high_mass_mask = ~size_mask
+                combined_mass = np.mean([np.mean(np.log10(mass[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+                combined_temp1 = np.mean([np.median(np.log10(temp1[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+                combined_temp_rescaled1 = np.mean([np.median(np.log10(temp_rescaled1[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+
+            # append as a single extra high-mass point
+            mean_log_mass_main = np.append(mean_log_mass_main, combined_mass)
+            median_temp_main1 = np.append(median_temp_main1, combined_temp1)
+            median_temp_rescaled_main1 = np.append(median_temp_rescaled_main, combined_temp_rescaled)
+
             if m == "GR":
                 self.median_temp_gr = median_temp_no_log
                 self.mean_log_mass_gr = mean_log_mass
@@ -982,23 +998,23 @@ class Scaling_Relation:
                 self.median_temp_gr1 = median_temp_no_log1
                 self.mean_log_mass_gr = mean_log_mass
                 ax.scatter(logmass,logtemp1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
-                ax.plot(mean_log_mass[size >= 3], median_temp1[size >= 3], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
+                ax.plot(mean_log_mass_main, median_temp_main1, linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
             else:
 #                ax.plot(mean_log_mass[size >= 5], median_temp[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
 #                ax.plot(mean_log_mass[size >= 5], median_temp_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
-                ax.plot(mean_log_mass[size >= 3], median_temp1[size >= 3], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
-                ax.plot(mean_log_mass[size >= 3], median_temp_rescaled1[size >= 3], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
+                ax.plot(mean_log_mass_main, median_temp_main1, linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
+                ax.plot(mean_log_mass_main, median_temp_rescaled_main1, linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
              
     
         ax.set_xlim([13, 15.4])
-        ax.set_ylim([-0.75, 1.25])                                                                                                                                                               
+        ax.set_ylim([-0.75, 1.25])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_yticks(np.arange(-0.75,1.25,0.25))
         ax.set_xticklabels(r'')
         ax.set_xticks(np.arange(13,15.4,0.5))
-  
-        
+
+
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc='lower right', fontsize=self.legsize, frameon=False)
@@ -1050,7 +1066,7 @@ class Scaling_Relation:
                 bins = np.logspace(np.log10(1.e13), 15.3, 10, base=10.0)
                 digitized = np.digitize(mass, bins)
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
-                size_mask = self.size_gr >= 3
+                size_mask = self.size_gr >= 5
                 # Calculate the ratio of the difference
                 median_temp_rescaled = np.array([float(np.median(temp_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
                 median_temp = np.array([float(np.median(temp[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
