@@ -976,7 +976,7 @@ class Scaling_Relation:
             size_mask = size >= 5
             mean_log_mass_main = mean_log_mass[size_mask]
             median_temp_main1 = median_temp1[size_mask]
-            median_temp_rescaled_main1 = median_temp_rescaled1[mask]
+            median_temp_rescaled_main1 = median_temp_rescaled1[size_mask]
 
             # handle sparse high-mass bins separately
             if np.any(~size_mask):  # there are sparse bins
@@ -988,7 +988,7 @@ class Scaling_Relation:
             # append as a single extra high-mass point
             mean_log_mass_main = np.append(mean_log_mass_main, combined_mass)
             median_temp_main1 = np.append(median_temp_main1, combined_temp1)
-            median_temp_rescaled_main1 = np.append(median_temp_rescaled_main, combined_temp_rescaled)
+            median_temp_rescaled_main1 = np.append(median_temp_rescaled_main1, combined_temp_rescaled1)
 
             if m == "GR":
                 self.median_temp_gr = median_temp_no_log
