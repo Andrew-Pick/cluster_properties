@@ -662,6 +662,24 @@ class ClusterProperties:
 
 
     def proxy_scaling_relation(self, proxy_type="SZ", no_core=False, temp_weight="mass", use_analytical=False):
+        ### Loads properties from dumpfile ###
+        if self.model == "GR" or self.simulation == "L302_N1136":
+            group_pickle = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
+            print(group_pickle)
+        else:
+            group_pickle = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
+
+        if not os.path.exists(group_pickle):
+            raise FileNotFoundError(f"Group pickle not found: {group_pickle}")
+
+        with open(group_pickle, "rb") as f:
+            (self.M500, self.M200, self.Mg500, self.Mstar, self.A19_Mstar, self.SMF, self.vol_T500, self.mass_T500,
+             self.vol_T500_with_core, self.mass_T500_with_core,
+             self.Ysz_with_core, self.Ysz_no_core,
+             self.Lx_with_core, self.Lx_no_core,
+             self.vol_temp_profile, self.mass_temp_profile, self.density_profile,
+             self.electron_pressure_profile, self.cum_fgas) = pickle.load(f)
+        ### End  ###
         if no_core:
             # temp and Ysz exclude core region
             core_name = "no_core%s" % (self.core_label)   # unique label if core != 0.15*R500

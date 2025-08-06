@@ -19,9 +19,9 @@ cp = ClusterProperties(
     rescaling="true",
     core_frac=0.15
 )
-cp.cluster_properties()    # compute profiles & properties
-#cp.proxy_scaling_relation(
-#    proxy_type=["T"],
-#    temp_weight="mass",
-#    no_core=True,
-#    use_analytical=True)
+#cp.cluster_properties()    # compute profiles & properties
+cp.proxy_scaling_relation(
+    proxy_type=["T"],
+    temp_weight="mass",
+    no_core=True,
+    use_analytical=True)
