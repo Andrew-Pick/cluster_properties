@@ -953,7 +953,7 @@ class Scaling_Relation:
                 temp_rescaled_list1.append(t_rescaled1)
             temp_rescaled1 = np.array(temp_rescaled_list1)   
             
-            bins = np.logspace(np.log10(1.e13), 15.3, 8, base=10.0)
+            bins = np.logspace(np.log10(1.e13), 15.3, 10, base=10.0)
             digitized = np.digitize(mass, bins)
             logmass=np.log10(mass)
             logtemp=np.log10(temp)
@@ -1047,7 +1047,7 @@ class Scaling_Relation:
                 temp_rescaled1 = np.array(temp_rescaled_list1) 
                 
                 
-                bins = np.logspace(np.log10(1.e13), 15.3, 8, base=10.0)
+                bins = np.logspace(np.log10(1.e13), 15.3, 10, base=10.0)
                 digitized = np.digitize(mass, bins)
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
                 size_mask = self.size_gr >= 3
