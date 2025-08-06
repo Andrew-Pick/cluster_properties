@@ -977,17 +977,17 @@ class Scaling_Relation:
             if m == "GR":
                 self.median_temp_gr = median_temp_no_log
                 self.mean_log_mass_gr = mean_log_mass
-                ax.scatter(logmass,logtemp, marker='o', s=0.8, color="darkgrey",alpha=0.4)
-                ax.plot(mean_log_mass[size >= 3], median_temp[size >= 3], linewidth=self.lw, color=self.colors[mid],label = 'GR with core')  
+#                ax.scatter(logmass,logtemp, marker='o', s=0.8, color="darkgrey",alpha=0.4)
+#                ax.plot(mean_log_mass[size >= 5], median_temp[size >= 5], linewidth=self.lw, color=self.colors[mid],label = 'GR with core')  
                 self.median_temp_gr1 = median_temp_no_log1
                 self.mean_log_mass_gr = mean_log_mass
-#                ax.scatter(logmass,logtemp1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
-#                ax.plot(mean_log_mass[size >= 5], median_temp1[size >= 5], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
+                ax.scatter(logmass,logtemp1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
+                ax.plot(mean_log_mass[size >= 3], median_temp1[size >= 3], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
             else:
-                ax.plot(mean_log_mass[size >= 3], median_temp[size >= 3], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
-                ax.plot(mean_log_mass[size >= 3], median_temp_rescaled[size >= 3], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
-#                ax.plot(mean_log_mass[size >= 5], median_temp1[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
-#                ax.plot(mean_log_mass[size >= 5], median_temp_rescaled1[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' no core rescaled') 
+#                ax.plot(mean_log_mass[size >= 5], median_temp[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
+#                ax.plot(mean_log_mass[size >= 5], median_temp_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
+                ax.plot(mean_log_mass[size >= 3], median_temp1[size >= 3], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
+                ax.plot(mean_log_mass[size >= 3], median_temp_rescaled1[size >= 3], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
              
     
         ax.set_xlim([13, 15.4])
@@ -1050,7 +1050,7 @@ class Scaling_Relation:
                 bins = np.logspace(np.log10(1.e13), 15.3, 8, base=10.0)
                 digitized = np.digitize(mass, bins)
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
-                size_mask = self.size_gr >= 5
+                size_mask = self.size_gr >= 3
                 # Calculate the ratio of the difference
                 median_temp_rescaled = np.array([float(np.median(temp_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
                 median_temp = np.array([float(np.median(temp[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
@@ -1070,7 +1070,7 @@ class Scaling_Relation:
                 # Plot the ratio differences
 #               ax.plot(mean_log_mass, ratio_diff_rescaled,linewidth=self.lw,  color=self.colors[mid],alpha=0.5)
 #               ax.plot(mean_log_mass, ratio_diff, linewidth=self.lw, linestyle='dotted', color=self.colors[mid],alpha=0.5)  
-                ax.plot(mean_log_mass, ratio_diff_rescaled1,linewidth=self.lw,  color=self.colors[mid])
+                ax.plot(mean_log_mass, ratio_diff_rescaled1,linewidth=self.lw, linestyle='dashed', color=self.colors[mid])
                 ax.plot(mean_log_mass, ratio_diff1, linewidth=self.lw, linestyle='dotted', color=self.colors[mid])  
                 
         ax.set_xlim([13, 15.4])
