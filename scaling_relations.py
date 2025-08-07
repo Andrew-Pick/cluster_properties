@@ -850,8 +850,10 @@ class Scaling_Relation:
         self.plot_name = plot_name
         self.system = system
         self.show_spread = show_spread
-        self.redshift = 0 if self.snapshot == 12
-        self.redshift = 0.5 if self.snapshot == 21
+        if self.snapshot == 12:
+            self.rshift = 0.5
+        elif self.snapshot == 21:
+            self.rshift = 0
 
         # load snapshot
 #       if simulation == "L302_N1136":
@@ -939,7 +941,7 @@ class Scaling_Relation:
             temp_rescaled_list1=[]
             for i, t in zip(mass, temp):
                 if m!= 'GR':
-                    massratio = self.correction(truemass=i, model=m, redshift=self.redshift)
+                    massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
                     t_rescaled = t / massratio
                 else:
                     t_rescaled = t
@@ -948,7 +950,7 @@ class Scaling_Relation:
             
             for i, t in zip(mass, temp1):
                 if m!= 'GR':
-                    massratio = self.correction(truemass=i, model=m, redshift=self.redshift)
+                    massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
                     t_rescaled1 = t / massratio
                 else:
                     t_rescaled1 = t
@@ -1054,12 +1056,12 @@ class Scaling_Relation:
                 temp_rescaled_list = []
                 temp_rescaled_list1 = []
                 for i, t in zip(mass, temp):
-                    massratio = self.correction(truemass=i, model=m, redshift=self.redshift)
+                    massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
                     t_rescaled = t / massratio
                     temp_rescaled_list.append(t_rescaled)
                 temp_rescaled = np.array(temp_rescaled_list) 
                 for i, t in zip(mass, temp1):
-                    massratio = self.correction(truemass=i, model=m, redshift=self.redshift)
+                    massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
                     t_rescaled1 = t / massratio
                     temp_rescaled_list1.append(t_rescaled1)
                 temp_rescaled1 = np.array(temp_rescaled_list1) 
