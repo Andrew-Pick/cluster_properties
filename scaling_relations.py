@@ -1038,7 +1038,7 @@ class Scaling_Relation:
         title_x = xlim[0] + (xlim[1] - xlim[0]) * offset_x_fraction
         title_y = ylim[1] - (ylim[1] - ylim[0]) * offset_y_fraction
 
-        ax.text(title_x,title_y,rf'$\mathit{z} = {self.rshift:.1f}$',fontsize=self.mysize,ha='left', va='top')
+        ax.text(title_x,title_y,rf'$\mathit{{z}} = {self.rshift:.1f}$',fontsize=self.mysize,ha='left', va='top')
  #       plt.tight_layout()
     
     
