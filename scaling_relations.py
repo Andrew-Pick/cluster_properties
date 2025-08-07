@@ -853,7 +853,7 @@ class Scaling_Relation:
         if self.snapshot == 12:
             self.rshift = 0.5
         elif self.snapshot == 21:
-            self.rshift = 0
+            self.rshift = 0.0
 
         # load snapshot
 #       if simulation == "L302_N1136":
@@ -864,7 +864,7 @@ class Scaling_Relation:
 #       self.group_path = fd.group_path
 #       self.s = read_hdf5.snapshot(snapshot, directory=self.particle_path, dirbases=["snapdir_", ""], snapbases=["/GR_", "/gadget", "/snap_"], check_total_particle_number=True)
 
-        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/%s/" % (simulation)
+        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/" % (simulation)
         self.fileroot2 = "/cosma/home/dp203/dc-pick1/cluster_properties/plots/%s/" % (simulation)
         self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
         self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
@@ -977,7 +977,7 @@ class Scaling_Relation:
 
             size = np.array([len(temp[digitized == i]) for i in range(1, len(bins))])
             self.size_gr = np.array([len(temp[digitized == i]) for i in range(1, len(bins))])       
-            size_mask = size >= 5
+            size_mask = size >= 3
             mean_log_mass_main = mean_log_mass[size_mask]
             median_temp_main1 = median_temp1[size_mask]
             median_temp_rescaled_main1 = median_temp_rescaled1[size_mask]
@@ -1002,12 +1002,12 @@ class Scaling_Relation:
                 self.median_temp_gr1 = median_temp_no_log1
                 self.mean_log_mass_gr = mean_log_mass
                 ax.scatter(logmass, logtemp1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
-                ax.plot(mean_log_mass_main, median_temp_main1, linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
+                ax.plot(mean_log_mass[size >= 3], median_temp1[size >= 3], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
             else:
 #                ax.plot(mean_log_mass[size >= 5], median_temp[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
 #                ax.plot(mean_log_mass[size >= 5], median_temp_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
-                ax.plot(mean_log_mass_main, median_temp_main1, linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
-                ax.plot(mean_log_mass_main, median_temp_rescaled_main1, linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
+                ax.plot(mean_log_mass[size >= 3], median_temp1[size >= 3], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
+                ax.plot(mean_log_mass[size >= 3], median_temp_rescaled1[size >= 3], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
              
     
         ax.set_xlim([13, 15.4])
@@ -1038,7 +1038,7 @@ class Scaling_Relation:
         title_x = xlim[0] + (xlim[1] - xlim[0]) * offset_x_fraction
         title_y = ylim[1] - (ylim[1] - ylim[0]) * offset_y_fraction
 
-        ax.text(title_x,title_y,r'$\mathit{z} = 0.0$',fontsize=self.mysize,ha='left', va='top')
+        ax.text(title_x,title_y,rf'$\mathit{z} = {self.rshift:.1f}$',fontsize=self.mysize,ha='left', va='top')
  #       plt.tight_layout()
     
     
@@ -1070,7 +1070,7 @@ class Scaling_Relation:
                 bins = np.logspace(np.log10(1.e13), 15.3, 8, base=10.0)
                 digitized = np.digitize(mass, bins)
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
-                size_mask = self.size_gr >= 5
+                size_mask = self.size_gr >= 3
                 # Calculate the ratio of the difference
                 median_temp_rescaled = np.array([float(np.median(temp_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
                 median_temp = np.array([float(np.median(temp[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
