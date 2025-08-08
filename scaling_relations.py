@@ -838,7 +838,7 @@ class LoadDumpfile:
 
 
 class Scaling_Relation:
-    def __init__(self, simulation, models, realisations, snapshot, file_ending, labels, colors, defaults, plot_name, system='cosma7', show_spread=False):
+    def __init__(self, simulation, models, realisations, snapshot, file_ending, labels, colors, defaults, plot_name, system='cosma7', show_spread=False, property="SZ"):
         self.simulation = simulation
         self.models = models
         self.realisations = realisations
@@ -850,6 +850,7 @@ class Scaling_Relation:
         self.plot_name = plot_name
         self.system = system
         self.show_spread = show_spread
+        self.property = property  # Property can be "SZ", "T", "Yx" or "Lx"
         if self.snapshot == 12:
             self.rshift = 0.5
         elif self.snapshot == 21:
@@ -929,85 +930,95 @@ class Scaling_Relation:
 
     def z0(self, ax):
         
-        self.median_temp_gr = None
+        self.median_prop_gr = None
         self.mean_log_mass_gr = None
         for (mid,m) in enumerate(self.models):
             ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
             ldmass = ld.M500
             mass = ldmass # /0.6774
-            temp = ld.mass_T500_with_core
-            temp1 = ld.mass_T500
-            temp_rescaled_list=[]
-            temp_rescaled_list1=[]
-            for i, t in zip(mass, temp):
+            if self.property == "T":
+                prop = ld.mass_T500_with_core
+                prop1 = ld.mass_T500  # prop1 refers to properties excluding the core region of clusters
+            elif self.property == "SZ":
+                prop = ld.Ysz_with_core
+                prop1 = ld.Ysz_no_core
+            elif self.property == "Yx":
+                prop = ld.Mg500 * ld.mass_T500_with_core
+                prop1 = ld.Mg500 * ld.mass_T500
+            elif self.property == "Lx":
+                prop = ld.Lx_with_core
+                prop1 = ld.Lx_no_core
+            prop_rescaled_list=[]
+            prop_rescaled_list1=[]
+            for i, p in zip(mass, prop):
                 if m!= 'GR':
                     massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
-                    t_rescaled = t / massratio
+                    p_rescaled = p / massratio
                 else:
-                    t_rescaled = t
-                temp_rescaled_list.append(t_rescaled)
-            temp_rescaled = np.array(temp_rescaled_list)   
+                    p_rescaled = p
+                prop_rescaled_list.append(p_rescaled)
+            prop_rescaled = np.array(prop_rescaled_list)   
             
-            for i, t in zip(mass, temp1):
+            for i, p in zip(mass, prop1):
                 if m!= 'GR':
                     massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
-                    t_rescaled1 = t / massratio
+                    p_rescaled1 = p / massratio
                 else:
-                    t_rescaled1 = t
-                temp_rescaled_list1.append(t_rescaled1)
-            temp_rescaled1 = np.array(temp_rescaled_list1)   
+                    p_rescaled1 = p
+                prop_rescaled_list1.append(p_rescaled1)
+            prop_rescaled1 = np.array(prop_rescaled_list1)   
             
             bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
             digitized = np.digitize(mass, bins)
             logmass=np.log10(mass)
-            logtemp=np.log10(temp)
-            logtemp_rescaled=np.log10(temp_rescaled)
-            logtemp1=np.log10(temp1)
-            logtemp1_rescaled=np.log10(temp_rescaled1)
+            logprop=np.log10(prop)
+            logprop_rescaled=np.log10(prop_rescaled)
+            logprop1=np.log10(prop1)
+            logprop1_rescaled=np.log10(prop_rescaled1)
       
             
             mean_log_mass = np.array([(float(np.mean(np.log10(mass[digitized == i])))) for i in range(1, len(bins))])   # units Msun
-            median_temp = np.array([float(np.median(np.log10(temp[digitized == i]))) for i in range(1, len(bins))])
-            median_temp_no_log = np.array([float(np.median(temp[digitized == i])) for i in range(1, len(bins))])
-            median_temp_rescaled = np.array([float(np.median(np.log10(temp_rescaled[digitized == i]))) for i in range(1, len(bins))]) 
+            median_prop = np.array([float(np.median(np.log10(prop[digitized == i]))) for i in range(1, len(bins))])
+            median_prop_no_log = np.array([float(np.median(prop[digitized == i])) for i in range(1, len(bins))])
+            median_prop_rescaled = np.array([float(np.median(np.log10(prop_rescaled[digitized == i]))) for i in range(1, len(bins))]) 
             
-            median_temp1 = np.array([float(np.median(np.log10(temp1[digitized == i]))) for i in range(1, len(bins))])
-            median_temp_no_log1 = np.array([float(np.median(temp1[digitized == i])) for i in range(1, len(bins))])
-            median_temp_rescaled1 = np.array([float(np.median(np.log10(temp_rescaled1[digitized == i]))) for i in range(1, len(bins))]) 
+            median_prop1 = np.array([float(np.median(np.log10(prop1[digitized == i]))) for i in range(1, len(bins))])
+            median_prop_no_log1 = np.array([float(np.median(prop1[digitized == i])) for i in range(1, len(bins))])
+            median_prop_rescaled1 = np.array([float(np.median(np.log10(prop_rescaled1[digitized == i]))) for i in range(1, len(bins))]) 
 
-            size = np.array([len(temp[digitized == i]) for i in range(1, len(bins))])
-            self.size_gr = np.array([len(temp[digitized == i]) for i in range(1, len(bins))])       
+            size = np.array([len(prop[digitized == i]) for i in range(1, len(bins))])
+            self.size_gr = np.array([len(prop[digitized == i]) for i in range(1, len(bins))])       
             size_mask = size >= 2
             mean_log_mass_main = mean_log_mass[size_mask]
-            median_temp_main1 = median_temp1[size_mask]
-            median_temp_rescaled_main1 = median_temp_rescaled1[size_mask]
+            median_prop_main1 = median_prop1[size_mask]
+            median_prop_rescaled_main1 = median_prop_rescaled1[size_mask]
 
             # handle sparse high-mass bins separately
             if np.any(~size_mask):  # there are sparse bins
                 high_mass_mask = ~size_mask
                 combined_mass = np.mean([np.mean(np.log10(mass[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
-                combined_temp1 = np.mean([np.median(np.log10(temp1[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
-                combined_temp_rescaled1 = np.mean([np.median(np.log10(temp_rescaled1[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+                combined_prop1 = np.mean([np.median(np.log10(prop1[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+                combined_prop_rescaled1 = np.mean([np.median(np.log10(prop_rescaled1[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
 
             	# append as a single extra high-mass point
                 mean_log_mass_main = np.append(mean_log_mass_main, combined_mass)
-                median_temp_main1 = np.append(median_temp_main1, combined_temp1)
-                median_temp_rescaled_main1 = np.append(median_temp_rescaled_main1, combined_temp_rescaled1)
+                median_prop_main1 = np.append(median_prop_main1, combined_prop1)
+                median_prop_rescaled_main1 = np.append(median_prop_rescaled_main1, combined_prop_rescaled1)
 
             if m == "GR":
-                self.median_temp_gr = median_temp_no_log
+                self.median_prop_gr = median_prop_no_log
                 self.mean_log_mass_gr = mean_log_mass
-#                ax.scatter(logmass,logtemp, marker='o', s=0.8, color="darkgrey",alpha=0.4)
-#                ax.plot(mean_log_mass[size >= 5], median_temp[size >= 5], linewidth=self.lw, color=self.colors[mid],label = 'GR with core')  
-                self.median_temp_gr1 = median_temp_no_log1
+#                ax.scatter(logmass,logprop, marker='o', s=0.8, color="darkgrey",alpha=0.4)
+#                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, color=self.colors[mid],label = 'GR with core')  
+                self.median_prop_gr1 = median_prop_no_log1
                 self.mean_log_mass_gr = mean_log_mass
-                ax.scatter(logmass, logtemp1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
-                ax.plot(mean_log_mass[size >= 2], median_temp1[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
+                ax.scatter(logmass, logprop1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
+                ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
             else:
-#                ax.plot(mean_log_mass[size >= 5], median_temp[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
-#                ax.plot(mean_log_mass[size >= 5], median_temp_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
-                ax.plot(mean_log_mass[size >= 2], median_temp1[size >= 2], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
-                ax.plot(mean_log_mass[size >= 2], median_temp_rescaled1[size >= 2], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
+#                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
+#                ax.plot(mean_log_mass[size >= 5], median_prop_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
+                ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
+                ax.plot(mean_log_mass[size >= 2], median_prop_rescaled1[size >= 2], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
              
     
         ax.set_xlim([13, 15.4])
@@ -1043,7 +1054,7 @@ class Scaling_Relation:
     
     
     def z0_subplot(self, ax):
-        if self.median_temp_gr is None or self.size_gr is None:
+        if self.median_prop_gr is None or self.size_gr is None:
             raise ValueError("GR data has not been processed yet.")
 
         for (mid, m) in enumerate(self.models):
@@ -1051,20 +1062,30 @@ class Scaling_Relation:
                 ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
                 ldmass = ld.M500
                 mass = ldmass # /0.6774
-                temp = ld.mass_T500_with_core
-                temp1 = ld.mass_T500
-                temp_rescaled_list = []
-                temp_rescaled_list1 = []
-                for i, t in zip(mass, temp):
+                if self.property == "T":
+                    prop = ld.mass_T500_with_core
+                    prop1 = ld.mass_T500  # prop1 refers to properties excluding the core region of clusters
+                elif self.property == "SZ":
+                    prop = ld.Ysz_with_core
+                    prop1 = ld.Ysz_no_core
+                elif self.property == "Yx":
+                    prop = ld.Mg500 * ld.mass_T500_with_core
+                    prop1 = ld.Mg500 * ld.mass_T500
+                elif self.property == "Lx":
+                    prop = ld.Lx_with_core
+                    prop1 = ld.Lx_no_core
+                prop_rescaled_list = []
+                prop_rescaled_list1 = []
+                for i, p in zip(mass, prop):
                     massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
-                    t_rescaled = t / massratio
-                    temp_rescaled_list.append(t_rescaled)
-                temp_rescaled = np.array(temp_rescaled_list) 
-                for i, t in zip(mass, temp1):
+                    p_rescaled = p / massratio
+                    prop_rescaled_list.append(p_rescaled)
+                prop_rescaled = np.array(prop_rescaled_list) 
+                for i, p in zip(mass, prop1):
                     massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
-                    t_rescaled1 = t / massratio
-                    temp_rescaled_list1.append(t_rescaled1)
-                temp_rescaled1 = np.array(temp_rescaled_list1) 
+                    p_rescaled1 = p / massratio
+                    prop_rescaled_list1.append(p_rescaled1)
+                prop_rescaled1 = np.array(prop_rescaled_list1) 
                 
                 
                 bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
@@ -1072,21 +1093,21 @@ class Scaling_Relation:
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
                 size_mask = self.size_gr >= 3
                 # Calculate the ratio of the difference
-                median_temp_rescaled = np.array([float(np.median(temp_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
-                median_temp = np.array([float(np.median(temp[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
-                median_temp_rescaled1 = np.array([float(np.median(temp_rescaled1[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
-                median_temp1 = np.array([float(np.median(temp1[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
+                median_prop_rescaled = np.array([float(np.median(prop_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
+                median_prop = np.array([float(np.median(prop[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
+                median_prop_rescaled1 = np.array([float(np.median(prop_rescaled1[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
+                median_prop1 = np.array([float(np.median(prop1[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
                 mean_log_mass = np.array([float(np.mean(np.log10(mass[digitized == i]))) for i in range(1, len(bins)) if size_mask[i-1]])
-                median_temp_gr_filtered = self.median_temp_gr[size_mask]
-                median_temp_gr_filtered1 = self.median_temp_gr1[size_mask]
+                median_prop_gr_filtered = self.median_temp_gr[size_mask]
+                median_prop_gr_filtered1 = self.median_temp_gr1[size_mask]
 
-                if len(median_temp_rescaled) != len(median_temp_gr_filtered):
-                    raise ValueError(f"Array length mismatch: {len(median_temp_rescaled)} vs {len(median_temp_gr_filtered)}")
+                if len(median_prop_rescaled) != len(median_prop_gr_filtered):
+                    raise ValueError(f"Array length mismatch: {len(median_prop_rescaled)} vs {len(median_prop_gr_filtered)}")
  
-                ratio_diff_rescaled = (median_temp_rescaled - median_temp_gr_filtered) / median_temp_gr_filtered
-                ratio_diff = (median_temp - median_temp_gr_filtered) / median_temp_gr_filtered
-                ratio_diff_rescaled1 = (median_temp_rescaled1 - median_temp_gr_filtered1) / median_temp_gr_filtered1
-                ratio_diff1 = (median_temp1 - median_temp_gr_filtered1) / median_temp_gr_filtered1
+                ratio_diff_rescaled = (median_prop_rescaled - median_prop_gr_filtered) / median_prop_gr_filtered
+                ratio_diff = (median_prop - median_prop_gr_filtered) / median_prop_gr_filtered
+                ratio_diff_rescaled1 = (median_prop_rescaled1 - median_prop_gr_filtered1) / median_prop_gr_filtered1
+                ratio_diff1 = (median_prop1 - median_prop_gr_filtered1) / median_prop_gr_filtered1
                 # Plot the ratio differences
 #               ax.plot(mean_log_mass, ratio_diff_rescaled,linewidth=self.lw,  color=self.colors[mid],alpha=0.5)
 #               ax.plot(mean_log_mass, ratio_diff, linewidth=self.lw, linestyle='dotted', color=self.colors[mid],alpha=0.5)  
