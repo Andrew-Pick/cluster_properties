@@ -904,7 +904,7 @@ class Scaling_Relation:
 
     def correction(self, truemass, model, redshift):
         '''Enhancement of the dynamical mass with respect to the true mass,
-        given the true mass in units Msun, for z=0.
+        given the true mass in units Msun.
         '''
         
         p1=2.21
@@ -1016,13 +1016,13 @@ class Scaling_Relation:
                 ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR no core')  
             else:
 #                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
-#                ax.plot(mean_log_mass[size >= 5], median_prop_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5) 
+#                ax.plot(mean_log_mass[size >= 5], median_prop_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5)
                 ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' no core')  
                 ax.plot(mean_log_mass[size >= 2], median_prop_rescaled1[size >= 2], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m+' no core rescaled') 
              
     
         ax.set_xlim([13, 15.4])
-        ax.set_ylim([-0.75, 1.25])
+        #ax.set_ylim([-0.75, 1.25])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_yticks(np.arange(-0.75,1.25,0.25))
@@ -1115,7 +1115,7 @@ class Scaling_Relation:
                 ax.plot(mean_log_mass, ratio_diff1, linewidth=self.lw, linestyle='dotted', color=self.colors[mid])  
                 
         ax.set_xlim([13, 15.4])
-        ax.set_ylim([-0.2, 0.8])                                                                                                                                                               
+#        ax.set_ylim([-0.2, 0.8])                                                                                                                                                               
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_yticks(np.arange(-0.2,0.8,0.2))
