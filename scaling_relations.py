@@ -1098,8 +1098,8 @@ class Scaling_Relation:
                 median_prop_rescaled1 = np.array([float(np.median(prop_rescaled1[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
                 median_prop1 = np.array([float(np.median(prop1[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
                 mean_log_mass = np.array([float(np.mean(np.log10(mass[digitized == i]))) for i in range(1, len(bins)) if size_mask[i-1]])
-                median_prop_gr_filtered = self.median_temp_gr[size_mask]
-                median_prop_gr_filtered1 = self.median_temp_gr1[size_mask]
+                median_prop_gr_filtered = self.median_prop_gr[size_mask]
+                median_prop_gr_filtered1 = self.median_prop_gr1[size_mask]
 
                 if len(median_prop_rescaled) != len(median_prop_gr_filtered):
                     raise ValueError(f"Array length mismatch: {len(median_prop_rescaled)} vs {len(median_prop_gr_filtered)}")
