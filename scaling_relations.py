@@ -871,7 +871,7 @@ class Scaling_Relation:
         self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
 
     def redshift(self):
-        self.mysize = "large"
+        self.mysize = "medium"
         self.axsize = "medium"
         self.legsize = "small"
         self.ms = 5.
@@ -889,9 +889,18 @@ class Scaling_Relation:
         # Hide x-ticks for ax_main and set the labels for ax_main
         plt.setp(ax_main.get_xticklabels(), visible=False)
 
-        
-        ax_main.set_ylabel(r'$\log_{10}(\overline{T}_{\textnormal{gas}} \, [\textnormal{keV}])$', fontsize=self.mysize, labelpad=10)
-        ax_sub.set_ylabel(r'$\Delta \overline{T}_{\textnormal{gas}} / \overline{T}_{\textnormal{gas,GR}}$', fontsize=self.axsize, labelpad=15)
+        if self.property == "T":
+            ax_main.set_ylabel(r'$\log_{10}(\overline{T}_{\textnormal{gas}} \, [\textnormal{keV}])$', fontsize=self.mysize, labelpad=10)
+            ax_sub.set_ylabel(r'$\Delta \overline{T}_{\textnormal{gas}} / \overline{T}_{\textnormal{gas,GR}}$', fontsize=self.axsize, labelpad=15)
+        elif self.property == "SZ":
+            ax_main.set_ylabel(r'$\log_{10}(Y_{SZ} \, [Mpc^2])$', fontsize=self.mysize, labelpad=10)
+            ax_sub.set_ylabel(r'$\Delta Y_{SZ} / Y_{SZ,GR}$', fontsize=self.axsize, labelpad=15)
+        elif self.property == "Yx":
+            ax_main.set_ylabel(r'$\log_{10}(Y_{X} \, [M_{\odot}keV])$', fontsize=self.mysize, labelpad=10)
+            ax_sub.set_ylabel(r'$\Delta Y_{X} / Y_{X,GR}$', fontsize=self.axsize, labelpad=15)
+        elif self.property == "Lx":
+            ax_main.set_ylabel(r'$\log_{10}(L_{X} \, [keV^{1/2}M^{2}_{\odot}Mpc^{-3}])$', fontsize=self.mysize, labelpad=10)
+            ax_sub.set_ylabel(r'$\Delta L_{X} / L_{X,GR}$', fontsize=self.axsize, labelpad=15)
         ax_sub.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
              
     
@@ -1022,10 +1031,10 @@ class Scaling_Relation:
              
     
         ax.set_xlim([13, 15.4])
-        #ax.set_ylim([-0.75, 1.25])
+        ax.set_ylim([-8, -3])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
-        ax.set_yticks(np.arange(-0.75,1.25,0.25))
+        ax.set_yticks(np.arange(-8,-3,1))
         ax.set_xticklabels(r'')
         ax.set_xticks(np.arange(13,15.4,0.5))
 
@@ -1037,7 +1046,7 @@ class Scaling_Relation:
 #        ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
 #        ax.set_ylabel('$\log_{10}(\overline{T}_{gas} \, [keV])$', fontsize=self.mysize)
 
-        ax.set_yticklabels([r'',r'$-0.5$',r'',r'$0.0$',r'',r'$0.5$',r'',r'$1.0$'],fontsize=self.axsize)  
+#        ax.set_yticklabels([r'',r'$-0.5$',r'',r'$0.0$',r'',r'$0.5$',r'',r'$1.0$'],fontsize=self.axsize)  
 
         offset_x_fraction = 0.05  # Horizontal offset
         offset_y_fraction = 0.05  # Vertical offset
@@ -1115,10 +1124,10 @@ class Scaling_Relation:
                 ax.plot(mean_log_mass, ratio_diff1, linewidth=self.lw, linestyle='dotted', color=self.colors[mid])  
                 
         ax.set_xlim([13, 15.4])
-#        ax.set_ylim([-0.2, 0.8])                                                                                                                                                               
+        ax.set_ylim([-0.4, 0.8])                                                                                                                                                               
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
-        ax.set_yticks(np.arange(-0.2,0.8,0.2))
+        ax.set_yticks(np.arange(-0.4,0.8,0.2))
         ax.set_xticklabels(r'')
         ax.set_xticks(np.arange(13,15.4,1))
   
@@ -1128,7 +1137,7 @@ class Scaling_Relation:
         ax.legend(loc='lower right', fontsize=self.legsize, frameon=False)
 
         ax.set_xticklabels([r'$13$',r'$14$',r'$15$'],fontsize=self.axsize)
-        ax.set_yticklabels([r'',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$'],fontsize=self.axsize)  
+#        ax.set_yticklabels([r'',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$'],fontsize=self.axsize)  
         
         ax.set_ylabel(r'$\Delta T_{\mathrm{gas}} / T_{\mathrm{gas,GR}}$', fontsize=self.axsize)
         ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
