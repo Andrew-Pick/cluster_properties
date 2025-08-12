@@ -1031,13 +1031,26 @@ class Scaling_Relation:
              
     
         ax.set_xlim([13, 15.4])
-        ax.set_ylim([-8, -3])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
-        ax.set_yticks(np.arange(-8,-3,1))
         ax.set_xticklabels(r'')
         ax.set_xticks(np.arange(13,15.4,0.5))
-
+        if self.property == "T":
+            ax.set_ylim([-0.75, 1.25])
+            ax.set_yticks(np.arange(-0.75,1.25,0.25))
+            ax.set_yticklabels([r'',r'$-0.5$',r'',r'$0.0$',r'',r'$0.5$',r'',r'$1.0$'],fontsize=self.axsize)
+        if self.property == "SZ":
+            ax.set_ylim([-8, -3])
+            ax.set_yticks(np.arange(-8,-2,1))
+            ax.set_yticklabels([r'',r'$-7$',r'$-6$',r'$-5$',r'$-4$',r'$-3$'],fontsize=self.axsize)
+        if self.property == "Yx":
+            ax.set_ylim([11, 16])
+            ax.set_yticks(np.arange(11,17,1))
+            ax.set_yticklabels([r'',r'$12$',r'$13$',r'$14$',r'$15$',r'$16$'],fontsize=self.axsize)
+        if self.property == "Lx":
+            ax.set_ylim([23, 29])
+            ax.set_yticks(np.arange(23,30,1))
+            ax.set_yticklabels([r'',r'$24$',r'$25$',r'$26$',r'$27$',r'$28$','$29$'],fontsize=self.axsize)
 
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
@@ -1046,7 +1059,6 @@ class Scaling_Relation:
 #        ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
 #        ax.set_ylabel('$\log_{10}(\overline{T}_{gas} \, [keV])$', fontsize=self.mysize)
 
-#        ax.set_yticklabels([r'',r'$-0.5$',r'',r'$0.0$',r'',r'$0.5$',r'',r'$1.0$'],fontsize=self.axsize)  
 
         offset_x_fraction = 0.05  # Horizontal offset
         offset_y_fraction = 0.05  # Vertical offset
@@ -1124,13 +1136,20 @@ class Scaling_Relation:
                 ax.plot(mean_log_mass, ratio_diff1, linewidth=self.lw, linestyle='dotted', color=self.colors[mid])  
                 
         ax.set_xlim([13, 15.4])
-        ax.set_ylim([-0.4, 0.8])                                                                                                                                                               
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
-        ax.set_yticks(np.arange(-0.4,0.8,0.2))
         ax.set_xticklabels(r'')
         ax.set_xticks(np.arange(13,15.4,1))
-  
+
+        if self.property == "T":
+            ax.set_ylim([-0.2, 0.8])
+            ax.set_yticks(np.arange(-0.2,0.8,0.2))
+            ax.set_yticklabels([r'',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$'],fontsize=self.axsize)
+        else:
+            ax.set_ylim([-0.4, 0.8])
+            ax.set_yticks(np.arange(-0.4,0.8,0.2))
+            ax.set_yticklabels([r'',r'$-0.2$',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$',r''],fontsize=self.axsize)
+
         
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
