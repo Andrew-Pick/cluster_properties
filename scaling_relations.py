@@ -838,7 +838,7 @@ class LoadDumpfile:
 
 
 class Scaling_Relation:
-    def __init__(self, simulation, models, realisations, snapshot, file_ending, labels, colors, defaults, plot_name, system='cosma7', show_spread=False, property="SZ"):
+    def __init__(self, simulation, models, realisations, snapshot, file_ending, labels, colors, defaults, plot_name, system='cosma7', show_spread=False, property="SZ",core_frac=0.15):
         self.simulation = simulation
         self.models = models
         self.realisations = realisations
@@ -851,6 +851,7 @@ class Scaling_Relation:
         self.system = system
         self.show_spread = show_spread
         self.property = property  # Property can be "SZ", "T", "Yx" or "Lx"
+        self.core_frac = core_frac
         if self.snapshot == 12:
             self.rshift = 0.5
         elif self.snapshot == 21:
@@ -908,8 +909,9 @@ class Scaling_Relation:
         directory = os.path.dirname(self.fileroot2)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        fig.savefig(self.fileroot2+"L302_gastempscalingz0_sub_mass_compare_rescaled.pdf")
-        print('Figure saved at '+self.fileroot2+"L302_gastempscalingz0_sub_mass_compare_rescaled.pdf")
+        filename = "%s_s%d.pdf" % (self.property,self.snapshot)
+        fig.savefig(self.fileroot2+filename)
+        print('Figure saved at '+self.fileroot2+filename)
 
     def correction(self, truemass, model, redshift):
         '''Enhancement of the dynamical mass with respect to the true mass,
