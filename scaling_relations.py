@@ -866,9 +866,14 @@ class Scaling_Relation:
 #       self.group_path = fd.group_path
 #       self.s = read_hdf5.snapshot(snapshot, directory=self.particle_path, dirbases=["snapdir_", ""], snapbases=["/GR_", "/gadget", "/snap_"], check_total_particle_number=True)
 
+        if self.core_frac == 0.15:
+            self.core_label = ""
+        else:
+            self.core_label = "_%.2f" % (self.core_frac)
+
         self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/" % (simulation)
         self.fileroot2 = "/cosma/home/dp203/dc-pick1/cluster_properties/plots/%s/" % (simulation)
-        self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
+        self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending,self.core_label) for (mid, m) in enumerate(models)]
         self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
 
     def redshift(self):
