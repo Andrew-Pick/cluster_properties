@@ -914,7 +914,7 @@ class Scaling_Relation:
         directory = os.path.dirname(self.fileroot2)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        filename = "%s_s%d_core%s.pdf" % (self.property,self.snapshot,self.core_label)
+        filename = "%s_s%d%s.pdf" % (self.property,self.snapshot,self.core_label)
         fig.savefig(self.fileroot2+filename)
         print('Figure saved at '+self.fileroot2+filename)
 
