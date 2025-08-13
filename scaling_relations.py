@@ -873,7 +873,7 @@ class Scaling_Relation:
 
         self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/" % (simulation)
         self.fileroot2 = "/cosma/home/dp203/dc-pick1/cluster_properties/plots/%s/" % (simulation)
-        self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending,self.core_label) for (mid, m) in enumerate(models)]
+        self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending,self.core_label) for (mid, m) in enumerate(models)]
         self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
 
     def redshift(self):
@@ -914,7 +914,7 @@ class Scaling_Relation:
         directory = os.path.dirname(self.fileroot2)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        filename = "%s_s%d.pdf" % (self.property,self.snapshot)
+        filename = "%s_s%d_core%s.pdf" % (self.property,self.snapshot,self.core_label)
         fig.savefig(self.fileroot2+filename)
         print('Figure saved at '+self.fileroot2+filename)
 
