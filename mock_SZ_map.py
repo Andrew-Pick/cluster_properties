@@ -49,6 +49,9 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
+def load_pressure_grid(snap):
+    
+
 
 # --- your instrument / map setup ---
 fov_deg   = 2.0
