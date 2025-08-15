@@ -1,8 +1,15 @@
 import numpy as np
+from astropy.cosmology import FlatLambdaCDM
 
 # --- cosmology helpers (you can use astropy.cosmology instead) ---
-def comoving_distance(z): ...
-def angular_diameter_distance(z): ...
+def comoving_distance(z): 
+    cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)
+    d_comoving = cosmo.comoving_distance(z).value   # in Mpc
+    print(f"Comoving distance at z={z} is {d_comoving:.2f}")
+def angular_diameter_distance(z): 
+    cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)  # matches your simulation
+    d_ang = cosmo.angular_diameter_distance(z)
+    print(f"Angular diameter distance at z={z} is {d_ang:.2f}")
 
 # --- your instrument / map setup ---
 fov_deg   = 2.0
