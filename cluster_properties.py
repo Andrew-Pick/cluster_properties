@@ -284,6 +284,36 @@ class ClusterProperties:
         print("Min / Max mass: %.2f / %.2f" % (np.log10(min(self.group_m500[self.sample] * self.s.header.hubble)), np.log10(max(self.group_m500[self.sample] * self.s.header.hubble))))
         print("Sample size: ", len(self.sample))
 
+        print("Processing group properties ...")
+        cell_counter = 0
+        sfr_counter = 0
+        for (index, group) in enumerate(self.sample):
+            if index % 100 == 0:
+                print("Iteration %s/%s" % (index, len(self.sample)))
+               
+            gas_radii = np.zeros(len(self.gp.group_particles['gas'][group]))
+            temp = np.zeros(len(self.gp.group_particles['gas'][group]))
+            electron_number = np.zeros(len(self.gp.group_particles['gas'][group]))
+            electron_pressure = np.zeros(len(self.gp.group_particles['gas'][group]))
+
+            # iterate through gas particles within r<R200 in each group
+            for (pid, particle) in enumerate(self.gp.group_particles['gas'][group]):
+                cell_counter += 1
+                ### For referee ###
+                if self.gas_sfr[particle] > 0.:
+                    sfr_counter += 1
+#                    continue   # Skip particle if SFR > 0 (i.e., temp will remain zero)
+                ### End ###
+
+                gas_radii[pid] = np.sqrt(np.sum((self.gas_positions[particle] - self.group_pos[group])**2))
+                temp[pid] = gas_temperature(self.internal_energy[particle], self.electron_abundance[particle])   # units keV
+                electron_number[pid] = self.electron_abundance[particle] * (XH * self.gas_masses[particle] / (mp / Msun))
+                # right-hand bracket gives number of hydrogen atoms
+                electron_pressure[pid] = temp[pid] * electron_number[pid] / (self.gas_masses[particle] / self.gas_densities[particle])   # units keV kpc^-3
+
+             print(f"Electron pressure: {electron_pressure}")
+             print(f"Position: {self.gas_positions}")
+
 
     def cluster_properties(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
