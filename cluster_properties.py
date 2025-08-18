@@ -252,13 +252,10 @@ class ClusterProperties:
 
     def calc_electron_pressure(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
-            group_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
-            subhalo_dumpfile = self.fileroot+"pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (self.simulation,self.model,self.realisation,self.snapshot,self.file_ending)
-            print(group_dumpfile)
-            print(subhalo_dumpfile)
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_pressure.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
+            print(pressure_dumpfile)
         else:
-            group_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
-            subhalo_dumpfile = self.fileroot+"pickle_files/subhalo_%s_%s_%s_s%d_%s_rescaling%s.pickle" % (self.simulation,self.model,self.realisation,self.snapshot,self.file_ending,self.rescaling)
+            group_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_pressure.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
 
         # define logarithmic radial bins, units kpc
         self.nbins = 28
@@ -287,7 +284,7 @@ class ClusterProperties:
         print("Processing group properties ...")
         cell_counter = 0
         sfr_counter = 0
-        positions_all = np.empty(0, self.gas_positions.shape[1])
+        positions_all = np.empty((0, self.gas_positions.shape[1]))
         electron_pressure_total = np.array([])
         for (index, group) in enumerate(self.sample):
             if index % 100 == 0:
@@ -296,7 +293,7 @@ class ClusterProperties:
             gas_radii = np.zeros(len(self.gp.group_particles['gas'][group]))
             temp = np.zeros(len(self.gp.group_particles['gas'][group]))
             electron_number = np.zeros(len(self.gp.group_particles['gas'][group]))
-            positions = np.zeros(len(self.gp.group_particles['gas'][group]))
+            positions = np.zeros((len(self.gp.group_particles['gas'][group]), self.gas_positions.shape[1]))
             electron_pressure = np.zeros(len(self.gp.group_particles['gas'][group]))
 
             # iterate through gas particles within r<R200 in each group
@@ -316,10 +313,14 @@ class ClusterProperties:
                 electron_pressure[pid] = temp[pid] * electron_number[pid] / (self.gas_masses[particle] / self.gas_densities[particle])   # units keV kpc^-3
             positions_all = np.vstack([positions_all, positions])
             electron_pressure_total = np.concatenate([electron_pressure_total, electron_pressure])
-            print(f"Electron pressure: {electron_pressure}")
-            print(f"Position: {positions}")
-        print(f"Electron pressure total: {electron_pressure_total}")
-        print(f"Position all: {positions_all}")
+            print(f"Electron pressure: {electron_pressure.shape}")
+            print(f"Position: {positions.shape}")
+        print(f"Electron pressure total: {electron_pressure_total.shape}")
+        print(f"Position all: {positions_all.shape}")
+
+        df = open(pressure_dumpfile,"wb+")
+        pickle.dump((electron_pressure_total, positions_all),df)
+        df.close
 
 
     def cluster_properties(self, group_id = -1):
