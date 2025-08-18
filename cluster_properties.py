@@ -287,6 +287,8 @@ class ClusterProperties:
         print("Processing group properties ...")
         cell_counter = 0
         sfr_counter = 0
+        positions_all = np.empty(0, self.gas_positions.shape[1])
+        electron_pressure_total = np.array([])
         for (index, group) in enumerate(self.sample):
             if index % 100 == 0:
                 print("Iteration %s/%s" % (index, len(self.sample)))
@@ -294,6 +296,7 @@ class ClusterProperties:
             gas_radii = np.zeros(len(self.gp.group_particles['gas'][group]))
             temp = np.zeros(len(self.gp.group_particles['gas'][group]))
             electron_number = np.zeros(len(self.gp.group_particles['gas'][group]))
+            positions = np.zeros(len(self.gp.group_particles['gas'][group]))
             electron_pressure = np.zeros(len(self.gp.group_particles['gas'][group]))
 
             # iterate through gas particles within r<R200 in each group
@@ -309,10 +312,14 @@ class ClusterProperties:
                 temp[pid] = gas_temperature(self.internal_energy[particle], self.electron_abundance[particle])   # units keV
                 electron_number[pid] = self.electron_abundance[particle] * (XH * self.gas_masses[particle] / (mp / Msun))
                 # right-hand bracket gives number of hydrogen atoms
+                positions[pid] = self.gas_positions[particle]
                 electron_pressure[pid] = temp[pid] * electron_number[pid] / (self.gas_masses[particle] / self.gas_densities[particle])   # units keV kpc^-3
-
-             print(f"Electron pressure: {electron_pressure}")
-             print(f"Position: {self.gas_positions}")
+            positions_all = np.vstack([positions_all, positions])
+            electron_pressure_total = np.concatenate([electron_pressure_total, electron_pressure])
+            print(f"Electron pressure: {electron_pressure}")
+            print(f"Position: {positions}")
+        print(f"Electron pressure total: {electron_pressure_total}")
+        print(f"Position all: {positions_all}")
 
 
     def cluster_properties(self, group_id = -1):
