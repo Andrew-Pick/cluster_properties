@@ -250,6 +250,41 @@ class ClusterProperties:
             self.gp = group_particles.GroupParticles(self.s, group_part_file, self.snapshot, ptypes=self.fp_ptypes, parttypes=self.fp_parttypes, mass_cut=self.mass_cut, delta=self.delta)
 
 
+    def calc_electron_pressure(self, group_id = -1):
+        if self.model == "GR" or self.simulation == "L302_N1136":
+            group_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
+            subhalo_dumpfile = self.fileroot+"pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (self.simulation,self.model,self.realisation,self.snapshot,self.file_ending)
+            print(group_dumpfile)
+            print(subhalo_dumpfile)
+        else:
+            group_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
+            subhalo_dumpfile = self.fileroot+"pickle_files/subhalo_%s_%s_%s_s%d_%s_rescaling%s.pickle" % (self.simulation,self.model,self.realisation,self.snapshot,self.file_ending,self.rescaling)
+
+        # define logarithmic radial bins, units kpc
+        self.nbins = 28
+        min_rad = 14.9
+        max_rad = 1000
+        self.bins = np.logspace(np.log10(min_rad), np.log10(max_rad), self.nbins + 1, base = 10.0)
+        self.bin_radii = 0.5 * (self.bins[1:] + self.bins[:-1])   
+        # midpoint of each bin, kpc units
+
+        # define group sample
+        if group_id != -1:
+            self.sample = [group_id]
+        else:
+            if self.delta == 200:
+                self.sample = np.where(self.s.cat['Group_M_Crit200'] * self.s.header.hubble > self.mass_cut)[0]
+            elif self.delta == 500:
+                self.sample = np.where(self.s.cat['Group_M_Crit500'] * self.s.header.hubble > self.mass_cut)[0]
+            elif self.delta == "all":
+                self.sample = np.where(self.s.cat['Group_M_Crit500'] * self.s.header.hubble > -inf)[0]
+        # NB:// mass_cut units are Msun/h
+
+        print("Median M500 [Msun/h]: %.2f" % (np.log10(np.median(self.group_m500[self.sample] * self.s.header.hubble))))
+        print("Min / Max mass: %.2f / %.2f" % (np.log10(min(self.group_m500[self.sample] * self.s.header.hubble)), np.log10(max(self.group_m500[self.sample] * self.s.header.hubble))))
+        print("Sample size: ", len(self.sample))
+
+
     def cluster_properties(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
             group_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
