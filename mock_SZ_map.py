@@ -50,7 +50,7 @@ def find_snapshot_near(target_z, snap_numbers=None):
     return found_snaps[idx], found_zs[idx]
 
 class LightCone:
-    def __init__(self, simulation, model, realisation, system='cosma7', mass_cut=1.0e13, delta=500, file_ending="highMass_paper"):
+    def __init__(self, simulation, model, realisation, delta=500, file_ending="all"):
         self.simulation = simulation
         self.model = model
         self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/%s/" % (self.simulation,self.model)
