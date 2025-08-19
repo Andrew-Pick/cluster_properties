@@ -2,6 +2,7 @@ import os
 import numpy as np
 from astropy.cosmology import FlatLambdaCDM
 import h5py
+import pickle
 
 # --- cosmology helpers (you can use astropy.cosmology instead) ---
 def comoving_distance(z):
@@ -55,17 +56,16 @@ class LightCone:
         self.model = model
         self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/%s/" % (self.simulation,self.model)
         self.realisation = realisation
-        self.mass_cut = mass_cut
         self.delta = delta
         self.file_ending = file_ending
-        
+
 
     def load_pressure_grid(self, snap):
         if self.model == "GR" or self.simulation == "L302_N1136":
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_pressure.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending, self.core_label)
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_pressure.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending)
             print(pressure_dumpfile)
         else:
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_pressure.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending, self.rescaling, self.core_label)
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s_pressure.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending, self.rescaling)
 
         if os.path.exists(pressure_dumpfile):
             print("%s exists!" % (pressure_dumpfile))
@@ -101,7 +101,7 @@ class LightCone:
             # 1) pick snapshot closest to z_mid
             snap, snap_z = find_snapshot_near(z_mid)
             # 2) load electron pressure grid for that snapshot (box units & grid)
-            P_e, box_size_com, grid_N = load_pressure_grid(snap)   # (Nx,Ny,Nz), Mpc/h and cell count
+            P_e, box_size_com, grid_N = self.load_pressure_grid(snap)   # (Nx,Ny,Nz), Mpc/h and cell count
             print(P_e,box_size_com,grid_N)
             # 3) compute shell comoving thickness
             chi_lo = comoving_distance(z_lo)   # Mpc/h (match units!)
