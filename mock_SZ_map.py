@@ -102,11 +102,10 @@ class LightCone:
             snap, snap_z = find_snapshot_near(z_mid)
             # 2) load electron pressure grid for that snapshot (box units & grid)
             P_e, box_size_com, grid_N = self.load_pressure_grid(snap)   # (Nx,Ny,Nz), Mpc/h and cell count
-            print(P_e,box_size_com,grid_N)
             # 3) compute shell comoving thickness
             chi_lo = comoving_distance(z_lo)   # Mpc/h (match units!)
             chi_hi = comoving_distance(z_hi)
-#            dchi   = chi_hi - chi_lo
+            dchi   = chi_hi - chi_lo
             # 4) resample/tile to angular grid at z_mid
 #            P_shell, dl_com = resample_to_shell_grid(P_e, z_mid, fov_rad, pix_rad, box_size_com, dchi)
             # P_shell has shape (npix, npix, Nz_shell), dl_com is comoving thickness per slab
