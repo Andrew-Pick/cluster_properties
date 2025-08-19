@@ -313,14 +313,13 @@ class ClusterProperties:
                 electron_pressure[pid] = temp[pid] * electron_number[pid] / (self.gas_masses[particle] / self.gas_densities[particle])   # units keV kpc^-3
             positions_all = np.vstack([positions_all, positions])
             electron_pressure_total = np.concatenate([electron_pressure_total, electron_pressure])
-            print(f"Electron pressure: {electron_pressure.shape}")
-            print(f"Position: {positions.shape}")
         print(f"Electron pressure total: {electron_pressure_total.shape}")
         print(f"Position all: {positions_all.shape}")
 
         df = open(pressure_dumpfile,"wb+")
         pickle.dump((electron_pressure_total, positions_all),df)
         df.close
+        print(f"Saved at: {pressure_dumpfile}")
 
 
     def cluster_properties(self, group_id = -1):

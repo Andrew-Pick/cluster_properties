@@ -49,7 +49,7 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
-def load_pressure_grid(snap):
+#def load_pressure_grid(snap):
     
 
 
@@ -74,7 +74,7 @@ y_map = np.zeros((npix, npix), dtype=np.float32)
 
 for z_lo, z_hi, z_mid in zip(z_edges[:-1], z_edges[1:], z_mids):
     # 1) pick snapshot closest to z_mid
-    snap = find_snapshot_near(z_mid)  # <- your function
+    snap, snap_z = find_snapshot_near(z_mid)  # <- your function
     # 2) load electron pressure grid for that snapshot (box units & grid)
 #    P_e, box_size_com, grid_N = load_pressure_grid(snap)   # (Nx,Ny,Nz), Mpc/h and cell count
     # 3) compute shell comoving thickness
