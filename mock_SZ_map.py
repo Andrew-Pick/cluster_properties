@@ -3,6 +3,7 @@ import numpy as np
 from astropy.cosmology import FlatLambdaCDM
 import h5py
 import pickle
+from scipy.ndimage import zoom
 
 # --- cosmology helpers (you can use astropy.cosmology instead) ---
 def comoving_distance(z):
@@ -75,7 +76,48 @@ class LightCone:
         else:
             print("%s does not exist!" % (group_dumpfile))
             sys.exit(0)
-            
+
+
+    def resample_to_shell_grid(self, P_e, z_mid, fov_rad, pix_rad, box_size_com, dchi):
+        # --- random shifts ---
+        shifts = [np.random.randint(0, s) for s in P_e.shape]
+        P_e = np.roll(P_e, shifts[0], axis=0)
+        P_e = np.roll(P_e, shifts[1], axis=1)
+        P_e = np.roll(P_e, shifts[2], axis=2)
+
+        # --- random flips/reflections ---
+        for axis in range(3):
+            if np.random.rand() < 0.5:
+                P_e = np.flip(P_e, axis=axis)
+
+        # --- target grid resolution ---
+        npix = int(np.round(fov_rad / pix_rad))
+
+        # Physical angular size of cube at z_mid
+        D_ang = angular_diameter_distance(z_mid)  # Mpc
+        theta_box = box_size_com / D_ang          # radians
+
+        # How many pixels cover the box in angular space?
+        n_box_pix = int(np.round(theta_box / pix_rad))
+
+        # --- rescale cube to this angular resolution ---
+        zoom_factors = (n_box_pix / P_e.shape[0],
+                        n_box_pix / P_e.shape[1],
+                        dchi / (box_size_com / P_e.shape[2]))  # scale z to shell thickness
+
+        P_resampled = zoom(P_e, zoom=zoom_factors, order=1)
+
+        # --- center into npix × npix map (pad/crop if necessary) ---
+        P_shell = np.zeros((npix, npix, P_resampled.shape[2]), dtype=np.float32)
+        nx, ny, nz = P_resampled.shape
+        x0 = (npix - nx) // 2
+        y0 = (npix - ny) // 2
+        P_shell[x0:x0+nx, y0:y0+ny, :] = P_resampled
+
+        dl_com = dchi / P_shell.shape[2]
+
+        return P_shell, dl_com
+
 
     def calc_y(self):
         # --- your instrument / map setup ---
@@ -86,8 +128,9 @@ class LightCone:
         npix      = int(np.round(fov_rad / pix_rad))
 
         # --- lightcone shells ---
-        z_edges = np.linspace(0.0, 0.0, 15)                     # example shells
+        z_edges = np.linspace(0.0, 3.0, 6)
         z_mids  = 0.5 * (z_edges[:-1] + z_edges[1:])
+        print(f"Shell midpoints: z = {z_mids}")
 
         # --- constants in cgs ---
         sigma_T = 6.6524587158e-25  # cm^2
@@ -107,7 +150,7 @@ class LightCone:
             chi_hi = comoving_distance(z_hi)
             dchi   = chi_hi - chi_lo
             # 4) resample/tile to angular grid at z_mid
-#            P_shell, dl_com = resample_to_shell_grid(P_e, z_mid, fov_rad, pix_rad, box_size_com, dchi)
+            P_shell, dl_com = resample_to_shell_grid(P_e, z_mid, fov_rad, pix_rad, box_size_com, dchi)
             # P_shell has shape (npix, npix, Nz_shell), dl_com is comoving thickness per slab
             # 5) convert to y and integrate along LoS
             # Make sure units agree: if P_e is proper, use proper dl;
