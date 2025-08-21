@@ -4,6 +4,7 @@ from astropy.cosmology import FlatLambdaCDM
 import h5py
 import pickle
 from scipy.ndimage import zoom
+import matplotlib.pyplot as plt
 
 # --- constants in cgs ---
 sigma_T = 6.6524587158e-25  # cm^2
@@ -143,6 +144,32 @@ class LightCone:
         return P_shell, dl_com
 
 
+    def plot_y_map(y_map, output=None):
+        npix = y_map.shape[0]
+        fov_arcmin = self.fov_deg * 60.0
+        extent = [-fov_arcmin/2, fov_arcmin/2, -fov_arcmin/2, fov_arcmin/2]  # arcmin
+
+        plt.figure(figsize=(6,5))
+        im = plt.imshow(
+            np.log10(y_map + 1e-10),  # log stretch, avoid log(0)
+            extent=extent,
+            origin="lower",
+            cmap="inferno"
+        )
+        cbar = plt.colorbar(im)
+        cbar.set_label(r"$\log_{10}(y)$")
+
+        plt.xlabel("Arcmin")
+        plt.ylabel("Arcmin")
+        plt.title("Mock SZ y-map")
+
+        if output:
+            plt.savefig(output, dpi=200, bbox_inches="tight")
+            print(f"Saved figure to {output}")
+        else:
+            plt.show()
+
+
     def calc_y(self):
 
         # --- initialize y map ---
@@ -168,6 +195,8 @@ class LightCone:
             dl_cm  = comoving_mpc_to_cm(dl_com)  # implement with correct h
             y_shell = prefac * np.sum(P_shell, axis=2) * dl_cm
             y_map  += y_shell.astype(np.float32)
+
+            plot_y_map(y_map)
 
         # 6) add CMB + noise, 7) convolve with beam, 8) matched filter
         # (Use the same matched filter code you already have.)
