@@ -1404,29 +1404,29 @@ class SimulationTesting:
 
 
 
-if __name__ == "__main__":
-    simulation = "L302_N1136"
+#if __name__ == "__main__":
+#    simulation = "L302_N1136"
 #    simulation = "L68_N256"
     # e.g., "TNG300-3", "L62_N512", "L62_N512_non_rad", "L25_N512, "L86_N256", "L62_N512_nDGP"
-    models = ["GR","F60","F55","F50","F45","F40"]
+#    models = ["GR","F60","F55","F50","F45","F40"]
 #    models = ["GR", "GR", "GR", "GR", "GR"]
-    realisations = ["1", "1"]
+#    realisations = ["1", "1"]
 #    realisations = ["1", "Soft_1", "WindSoft_2", "RhoWind_2_updated", "RhoWindBH_7"]
-    system = ["cosma8", "cosma6"]
+#    system = ["cosma8", "cosma6"]
 #    system = ["madfs", "madfs", "madfs", "cosma7", "cosma6"]
-    plot_labels = [r'L302-N1136-F5', r'L302-N1136-GR']
+#    plot_labels = [r'L302-N1136-F5', r'L302-N1136-GR']
 #    plot_labels = [r'TNG params', r'Soft $1/20$', r'$+\bar{e}_{\rm w}=0.5$', r'$+\rho_{\star}=0.08$', r'$+\epsilon_{\rm r}=0.22$']
-    colors = ['green', 'red']
+#    colors = ['green', 'red']
 #    colors = ['blue', 'orange', 'mediumseagreen', 'magenta', 'cyan']
-    param_defaults = []
-    snapshots = [12]
+#    param_defaults = []
+#    snapshots = [12]
 #    snapshots = [8]
-    plot_name = "L302_observables_sfrd_jk"
+#    plot_name = "L302_observables_sfrd_jk"
 #    plot_name = "L68_calibration"
-    show_spread = True
+#    show_spread = True
 #    show_spread = False
 
-    file_ending = "all"   # use for simulation tests
+#    file_ending = "all"   # use for simulation tests
 #    file_ending = "nDGP"   # nDGP project
 #    file_ending = "eff_data"   # fR hydro+SZ project
 #    file_ending = "low_mass"   # for fR and nDGP pressure profiles
@@ -1436,26 +1436,26 @@ if __name__ == "__main__":
 #    mass_cut = 1.4e12   # for fR and nDGP pressure profiles
 #    delta = 500   # 500 or 200 or "all" (wrt. TRUE density field)
 
-    core_frac = 0.15
+#    core_frac = 0.15
 
-    mass_cut = 1e10   # 1e13 Msun
-    delta = "all"   # 500 or 200 or "all"
+#    mass_cut = 1e10   # 1e13 Msun
+#    delta = "all"   # 500 or 200 or "all"
     
-    rescaling = "true"   # effective or true
-    use_analytical = True   # use tanh formula to find ratio?
-    proxy_types = ["T", "SZ", "Yx", "Lx"]   # T or SZ or Yx or Lx
-    temp_weight = "mass"
-    no_core = True   # True: exclude r < core_frac * R500 core region
-    mass_bins = ["low", "middle"]
-    for (rid, r) in enumerate(realisations):
-        for snapshot in snapshots:
+#    rescaling = "true"   # effective or true
+#    use_analytical = True   # use tanh formula to find ratio?
+#    proxy_types = ["T", "SZ", "Yx", "Lx"]   # T or SZ or Yx or Lx
+#    temp_weight = "mass"
+#    no_core = True   # True: exclude r < core_frac * R500 core region
+#    mass_bins = ["low", "middle"]
+#    for (rid, r) in enumerate(realisations):
+#        for snapshot in snapshots:
 #           break
-            cp = ClusterProperties(simulation, models[rid], r, snapshot, system=system[rid], mass_cut=mass_cut, delta=delta, file_ending=file_ending, rescaling=rescaling, core_frac = core_frac)
-            cp.cluster_properties()
+#            cp = ClusterProperties(simulation, models[rid], r, snapshot, system=system[rid], mass_cut=mass_cut, delta=delta, file_ending=file_ending, rescaling=rescaling, core_frac = core_frac)
+#            cp.cluster_properties()
 #            for proxy in proxy_types:
 #                cp.proxy_scaling_relation(proxy_type=proxy, no_core=no_core, temp_weight=temp_weight, use_analytical=use_analytical)
 #            for mass_bin in mass_bins:
 #                cp.profile(mass_bin = mass_bin)
 
-    sr = SimulationTesting(simulation, models, realisations, snapshots[0], file_ending=file_ending, labels=plot_labels, colors=colors, defaults=param_defaults, plot_name=plot_name, system=system, show_spread=show_spread)
+#    sr = SimulationTesting(simulation, models, realisations, snapshots[0], file_ending=file_ending, labels=plot_labels, colors=colors, defaults=param_defaults, plot_name=plot_name, system=system, show_spread=show_spread)
 #   sr.tng_observables()
