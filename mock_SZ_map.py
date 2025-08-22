@@ -16,7 +16,7 @@ def comoving_distance(z):
     cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)
     d_comoving = cosmo.comoving_distance(z).value  # in Mpc
     print(f"Comoving distance at z={z} is {d_comoving:.2f}")
-    return d_comoving
+    return d_comoving*0.6774
 
 def angular_diameter_distance(z):
     cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)  # matches your simulation
@@ -64,6 +64,18 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
+def _randomize_cube(P):
+    """Random periodic shift + random flips."""
+    Nx, Ny, Nz = P.shape
+    P = np.roll(P, np.random.randint(0, Nx), axis=0)
+    P = np.roll(P, np.random.randint(0, Ny), axis=1)
+    P = np.roll(P, np.random.randint(0, Nz), axis=2)
+    if np.random.rand() < 0.5:
+        P = np.flip(P, axis=0)
+    if np.random.rand() < 0.5:
+        P = np.flip(P, axis=1)
+    return P
+
 class LightCone:
     def __init__(self, simulation, model, realisation, delta=500, file_ending="all", fov_deg=2.0, pix_arcmin=0.5, zmin=0, zmax=3, znum=6):
         self.simulation = simulation
@@ -83,7 +95,7 @@ class LightCone:
         # --- lightcone shells ---
         self.z_edges = np.linspace(zmin, zmax, znum)
         self.z_mids  = 0.5 * (self.z_edges[:-1] + self.z_edges[1:])
-        print(f"Shell midpoints: z = {z_mids}")
+        print(f"Shell midpoints: z = {self.z_mids}")
 
 
     def load_pressure_grid(self, snap):
@@ -103,48 +115,49 @@ class LightCone:
             sys.exit(0)
 
 
-    def resample_to_shell_grid(self, P_e, z_mid, box_size_com, dchi):
-        # --- random shifts ---
-        shifts = [np.random.randint(0, s) for s in P_e.shape]
-        P_e = np.roll(P_e, shifts[0], axis=0)
-        P_e = np.roll(P_e, shifts[1], axis=1)
-        P_e = np.roll(P_e, shifts[2], axis=2)
+    def resample_to_shell_grid(self, P_e0, z_mid, box_size_com, dchi):
 
-        # --- random flips/reflections ---
-        for axis in range(3):
-            if np.random.rand() < 0.5:
-                P_e = np.flip(P_e, axis=axis)
+        P_e = P_e0 * 1.602e-9 / (3.086e21)**3  # convert from keV kpc^-3 to erg cm^-3
 
-        # --- target grid resolution ---
-        self.npix = int(np.round(self.fov_rad / self.pix_rad))
+        Nx, Ny, Nz = P_e.shape
+        dz = box_size_com / Nz  # comoving Mpc/h per voxel
 
-        # Physical angular size of cube at z_mid
-        D_ang = angular_diameter_distance(z_mid)  # Mpc
-        theta_box = box_size_com / D_ang          # radians
+        # --- how many full boxes and how many slices from the partial one? ---
+        n_full = int(dchi // box_size_com)                  # e.g. 2 for 2.5 boxes
+        frac  = (dchi / box_size_com) - n_full              # e.g. 0.5
+        n_frac_slices = int(np.round(frac * Nz))            # e.g. ~0.5 * Nz
+        n_frac_slices = max(0, min(n_frac_slices, Nz))      # clamp
 
-        # How many pixels cover the box in angular space?
-        n_box_pix = int(np.round(theta_box / self.pix_rad))
+        # --- accumulate 2D projection over the shell thickness ---
+        P_accum_2d = np.zeros((Nx, Ny), dtype=np.float64)
 
-        # --- rescale cube to this angular resolution ---
-        zoom_factors = (n_box_pix / P_e.shape[0],
-                        n_box_pix / P_e.shape[1],
-                        dchi / (box_size_com / P_e.shape[2]))  # scale z to shell thickness
+        # full boxes
+        for _ in range(n_full):
+            Pc = _randomize_cube(P_e)
+            # use all Nz slices
+            P_accum_2d += np.sum(Pc, axis=2)
 
-        P_resampled = zoom(P_e, zoom=zoom_factors, order=1)
+        # partial box (take n_frac_slices)
+        if n_frac_slices > 0:
+            Pc = _randomize_cube(P_e)
+            # pick a random starting slice and wrap if needed
+            z0 = np.random.randint(0, Nz)
+            if z0 + n_frac_slices <= Nz:
+                slab = Pc[:, :, z0:z0 + n_frac_slices]
+            else:
+                # wrap around (periodic)
+                end = (z0 + n_frac_slices) - Nz
+                slab = np.concatenate([Pc[:, :, z0:], Pc[:, :, :end]], axis=2)
+            P_accum_2d += np.sum(slab, axis=2)
 
-        # --- center into npix × npix map (pad/crop if necessary) ---
-        P_shell = np.zeros((self.npix, self.npix, P_resampled.shape[2]), dtype=np.float32)
-        nx, ny, nz = P_resampled.shape
-        x0 = (self.npix - nx) // 2
-        y0 = (self.npix - ny) // 2
-        P_shell[x0:x0+nx, y0:y0+ny, :] = P_resampled
+        # --- resample to angular pixel grid (npix × npix) ---
+        zoom_xy = (self.npix / Nx, self.npix / Ny)
+        P_resampled = zoom(P_accum_2d, zoom=zoom_xy, order=1)
 
-        dl_com = dchi / P_shell.shape[2]
-
-        return P_shell, dl_com
+        return P_resampled.astype(np.float32), dchi
 
 
-    def plot_y_map(y_map, output=None):
+    def plot_y_map(self, y_map, output=None):
         npix = y_map.shape[0]
         fov_arcmin = self.fov_deg * 60.0
         extent = [-fov_arcmin/2, fov_arcmin/2, -fov_arcmin/2, fov_arcmin/2]  # arcmin
@@ -184,8 +197,10 @@ class LightCone:
             chi_lo = comoving_distance(z_lo)   # Mpc/h (match units!)
             chi_hi = comoving_distance(z_hi)
             dchi   = chi_hi - chi_lo
+            print(f"dchi = {dchi}")
+            print(f"box_size_com = {box_size_com}")
             # 4) resample/tile to angular grid at z_mid
-            P_shell, dl_com = resample_to_shell_grid(P_e, z_mid, box_size_com, dchi)
+            P_shell, dl_com = self.resample_to_shell_grid(P_e, z_mid, box_size_com, dchi)
             # P_shell has shape (npix, npix, Nz_shell), dl_com is comoving thickness per slab
             # 5) convert to y and integrate along LoS
             # Make sure units agree: if P_e is proper, use proper dl;
@@ -193,10 +208,14 @@ class LightCone:
             prefac = sigma_T / m_e_c2       # (cm^2 / erg)
             # Convert comoving Mpc/h to cm, include h and (1+z) if needed (unit bookkeeping!)
             dl_cm  = comoving_mpc_to_cm(dl_com)  # implement with correct h
-            y_shell = prefac * np.sum(P_shell, axis=2) * dl_cm
+            y_shell = prefac * P_shell * dl_cm
+            print(f"prefac = {prefac}")
+            print(f"P_shell = {P_shell}")
+            print(f"dl_cm = {dl_cm}")
             y_map  += y_shell.astype(np.float32)
+            print(f"y_map = {y_map}")
 
-            plot_y_map(y_map)
+        self.plot_y_map(y_map)
 
         # 6) add CMB + noise, 7) convolve with beam, 8) matched filter
         # (Use the same matched filter code you already have.)
