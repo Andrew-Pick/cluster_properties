@@ -77,7 +77,7 @@ def _randomize_cube(P):
     return P
 
 class LightCone:
-    def __init__(self, simulation, model, realisation, delta=500, file_ending="all", fov_deg=2.0, pix_arcmin=0.5, zmin=0, zmax=3, znum=6):
+    def __init__(self, simulation, model, realisation, z_edges, delta=500, file_ending="all", fov_deg=2.0, pix_arcmin=0.5):
         self.simulation = simulation
         self.model = model
         self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/%s/" % (self.simulation,self.model)
@@ -86,14 +86,15 @@ class LightCone:
         self.file_ending = file_ending
 
          # --- your instrument / map setup ---
-        self.fov_deg   = 2.0
-        self.pix_arcmin = 0.5
+        self.fov_deg   = fov_deg
+        self.pix_arcmin = pix_arcmin
         self.fov_rad   = np.deg2rad(fov_deg)
         self.pix_rad   = np.deg2rad(pix_arcmin/60.0)
         self.npix      = int(np.round(self.fov_rad / self.pix_rad))
+        print(f"npix = {self.npix}")
 
         # --- lightcone shells ---
-        self.z_edges = np.linspace(zmin, zmax, znum)
+        self.z_edges = z_edges
         self.z_mids  = 0.5 * (self.z_edges[:-1] + self.z_edges[1:])
         print(f"Shell midpoints: z = {self.z_mids}")
 
@@ -197,8 +198,6 @@ class LightCone:
             chi_lo = comoving_distance(z_lo)   # Mpc/h (match units!)
             chi_hi = comoving_distance(z_hi)
             dchi   = chi_hi - chi_lo
-            print(f"dchi = {dchi}")
-            print(f"box_size_com = {box_size_com}")
             # 4) resample/tile to angular grid at z_mid
             P_shell, dl_com = self.resample_to_shell_grid(P_e, z_mid, box_size_com, dchi)
             # P_shell has shape (npix, npix, Nz_shell), dl_com is comoving thickness per slab
@@ -209,11 +208,7 @@ class LightCone:
             # Convert comoving Mpc/h to cm, include h and (1+z) if needed (unit bookkeeping!)
             dl_cm  = comoving_mpc_to_cm(dl_com)  # implement with correct h
             y_shell = prefac * P_shell * dl_cm
-            print(f"prefac = {prefac}")
-            print(f"P_shell = {P_shell}")
-            print(f"dl_cm = {dl_cm}")
             y_map  += y_shell.astype(np.float32)
-            print(f"y_map = {y_map}")
 
         self.plot_y_map(y_map)
 
