@@ -295,6 +295,9 @@ class ClusterProperties:
             electron_number = np.zeros(len(self.gp.group_particles['gas'][group]))
             positions = np.zeros((len(self.gp.group_particles['gas'][group]), self.gas_positions.shape[1]))
             electron_pressure = np.zeros(len(self.gp.group_particles['gas'][group]))
+            masses = np.zeros(len(self.gp.group_particles['gas'][group]))
+            densities = np.zeros(len(self.gp.group_particles['gas'][group]))
+            volumes = np.zeros(len(self.gp.group_particles['gas'][group]))
 
             # iterate through gas particles within r<R200 in each group
             for (pid, particle) in enumerate(self.gp.group_particles['gas'][group]):
@@ -311,8 +314,14 @@ class ClusterProperties:
                 # right-hand bracket gives number of hydrogen atoms
                 positions[pid] = self.gas_positions[particle]
                 electron_pressure[pid] = temp[pid] * electron_number[pid] / (self.gas_masses[particle] / self.gas_densities[particle])   # units keV kpc^-3
+
+                masses[pid] = self.gas_masses[particle]
+                densities[pid] = self.gas_densities[particle]
+                volumes[pid] = masses[pid]/densities[pid]
+
             positions_all = np.vstack([positions_all, positions])
             electron_pressure_total = np.concatenate([electron_pressure_total, electron_pressure])
+            gas_volume_total = np.concatenate([gas_volume_total, volumes])
         print(f"Electron pressure total: {electron_pressure_total.shape}")
         print(f"Position all: {positions_all.shape}")
 
@@ -336,7 +345,7 @@ class ClusterProperties:
 
         # Save data
         df = open(pressure_dumpfile,"wb+")
-        pickle.dump((Pe_grid_sum, Lbox, Ngrid),df)
+        pickle.dump((Pe_grid_sum, Lbox, Ngrid, gas_volume_total),df)
         df.close
         print(f"Saved at: {pressure_dumpfile}")
 

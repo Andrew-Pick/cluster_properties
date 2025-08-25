@@ -6,6 +6,8 @@ import pickle
 from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
 
+np.random.seed(1273)
+
 # --- constants in cgs ---
 sigma_T = 6.6524587158e-25  # cm^2
 m_e_c2  = 8.18710565e-7     # erg
@@ -175,7 +177,7 @@ class LightCone:
         zoom_xy = (self.npix / Nx_big, self.npix / Ny_big)
         P_resampled = zoom(P_accum_2d, zoom=zoom_xy, order=1)
 
-        return P_resampled.astype(np.float32), dchi
+        return P_resampled.astype(np.float64), dchi
 
 
     def plot_y_map(self, y_map, output=None):
@@ -219,7 +221,7 @@ class LightCone:
             chi_hi = comoving_distance(z_hi)
             dchi   = chi_hi - chi_lo
             # 4) resample/tile to angular grid at z_mid
-            P_shell, dl_com = self.resample_to_shell_grid(P_e, z_mid, box_size_com, dchi)
+            P_shell, dchi_com = self.resample_to_shell_grid(P_e, z_mid, box_size_com, dchi)
             # P_shell has shape (npix, npix, Nz_shell), dl_com is comoving thickness per slab
             # 5) convert to y and integrate along LoS
             
@@ -229,15 +231,15 @@ class LightCone:
             a = 1.0 / (1.0 + z_mid)
 
             P_proper = P_shell * (1.0/a**3)  # If pressure is comoving
-#            P2d_proper = P2d_res  # If pressure is proper
+#            P_proper = P_shell  # If pressure is proper
 
-            dl_cm = comoving_mpc_to_cm(dchi_com) * a     # cm (proper)
-#            dl_cm  = comoving_mpc_to_cm(dl_com)
+#            dl_cm = comoving_mpc_to_cm(dchi_com) * a     # cm (proper)
+            dl_cm  = comoving_mpc_to_cm(dchi_com)
             # Make sure units agree: if P_e is proper, use proper dl;
             # if P_e is comoving, convert appropriately (a factors).
             prefac = sigma_T / m_e_c2       # (cm^2 / erg)
             y_shell = prefac * P_proper * dl_cm
-            y_map  += y_shell.astype(np.float32)
+            y_map  += y_shell.astype(np.float64)
 
         self.plot_y_map(y_map)
 
