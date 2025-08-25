@@ -64,7 +64,7 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
-def _randomize_cube(P):
+def _randomise_cube(P):
     """Random periodic shift + random flips."""
     Nx, Ny, Nz = P.shape
     P = np.roll(P, np.random.randint(0, Nx), axis=0)
@@ -75,6 +75,17 @@ def _randomize_cube(P):
     if np.random.rand() < 0.5:
         P = np.flip(P, axis=1)
     return P
+
+def mosaic_xy(P_e, nx, ny):
+    """Tile P_e in x,y to at least nx,ny boxes (random rolls/flips per tile)."""
+    Nx, Ny, Nz = P_e.shape
+    big = np.zeros((nx*Nx, ny*Ny, Nz), dtype=P_e.dtype)
+    for ix in range(nx):
+        for iy in range(ny):
+            tile = _randomise_cube(P_e.copy())
+            x0, y0 = ix*Nx, iy*Ny
+            big[x0:x0+Nx, y0:y0+Ny, :] = tile
+    return big
 
 class LightCone:
     def __init__(self, simulation, model, realisation, z_edges, delta=500, file_ending="all", fov_deg=2.0, pix_arcmin=0.5):
@@ -120,8 +131,17 @@ class LightCone:
 
         P_e = P_e0 * 1.602e-9 / (3.086e21)**3  # convert from keV kpc^-3 to erg cm^-3
 
-        Nx, Ny, Nz = P_e.shape
-        dz = box_size_com / Nz  # comoving Mpc/h per voxel
+        # geometry
+        D_A = angular_diameter_distance(z_mid)             # Mpc
+        D_M = (1.0 + z_mid) * D_A                          # comoving Mpc
+        Lmap_com = D_M * self.fov_rad                      # comoving Mpc
+        nx = max(1, int(np.ceil(Lmap_com / box_size_com)))
+        ny = max(1, int(np.ceil(Lmap_com / box_size_com)))
+
+        # mosaic in x,y
+        P_big = mosaic_xy(P_e, nx, ny)                     # (nx*Nx, ny*Ny, Nz)
+        Nx_big, Ny_big, Nz = P_big.shape
+        dz_com = box_size_com / Nz                         # comoving Mpc/h per slice
 
         # --- how many full boxes and how many slices from the partial one? ---
         n_full = int(dchi // box_size_com)                  # e.g. 2 for 2.5 boxes
@@ -130,17 +150,17 @@ class LightCone:
         n_frac_slices = max(0, min(n_frac_slices, Nz))      # clamp
 
         # --- accumulate 2D projection over the shell thickness ---
-        P_accum_2d = np.zeros((Nx, Ny), dtype=np.float64)
+        P_accum_2d = np.zeros((Nx_big, Ny_big), dtype=np.float64)
 
         # full boxes
         for _ in range(n_full):
-            Pc = _randomize_cube(P_e)
+            Pc = _randomise_cube(P_e)
             # use all Nz slices
             P_accum_2d += np.sum(Pc, axis=2)
 
         # partial box (take n_frac_slices)
         if n_frac_slices > 0:
-            Pc = _randomize_cube(P_e)
+            Pc = _randomise_cube(P_e)
             # pick a random starting slice and wrap if needed
             z0 = np.random.randint(0, Nz)
             if z0 + n_frac_slices <= Nz:
@@ -152,7 +172,7 @@ class LightCone:
             P_accum_2d += np.sum(slab, axis=2)
 
         # --- resample to angular pixel grid (npix × npix) ---
-        zoom_xy = (self.npix / Nx, self.npix / Ny)
+        zoom_xy = (self.npix / Nx_big, self.npix / Ny_big)
         P_resampled = zoom(P_accum_2d, zoom=zoom_xy, order=1)
 
         return P_resampled.astype(np.float32), dchi
@@ -202,12 +222,21 @@ class LightCone:
             P_shell, dl_com = self.resample_to_shell_grid(P_e, z_mid, box_size_com, dchi)
             # P_shell has shape (npix, npix, Nz_shell), dl_com is comoving thickness per slab
             # 5) convert to y and integrate along LoS
+            
+            # Convert comoving Mpc/h to cm, include h and (1+z) if needed (unit bookkeeping!)
+            # If P_e is comoving pressure: P_proper = P_com * (1+z)^3
+            # Proper path length: dl_proper = dchi_com / (1+z)
+            a = 1.0 / (1.0 + z_mid)
+
+            P_proper = P_shell * (1.0/a**3)  # If pressure is comoving
+#            P2d_proper = P2d_res  # If pressure is proper
+
+            dl_cm = comoving_mpc_to_cm(dchi_com) * a     # cm (proper)
+#            dl_cm  = comoving_mpc_to_cm(dl_com)
             # Make sure units agree: if P_e is proper, use proper dl;
             # if P_e is comoving, convert appropriately (a factors).
             prefac = sigma_T / m_e_c2       # (cm^2 / erg)
-            # Convert comoving Mpc/h to cm, include h and (1+z) if needed (unit bookkeeping!)
-            dl_cm  = comoving_mpc_to_cm(dl_com)  # implement with correct h
-            y_shell = prefac * P_shell * dl_cm
+            y_shell = prefac * P_proper * dl_cm
             y_map  += y_shell.astype(np.float32)
 
         self.plot_y_map(y_map)
