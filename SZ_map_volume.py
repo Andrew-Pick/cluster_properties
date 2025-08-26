@@ -66,6 +66,18 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
+def _randomise_cube(P):
+    """Random periodic shift + random flips."""
+    Nx, Ny, Nz = P.shape
+    P = np.roll(P, np.random.randint(0, Nx), axis=0)
+    P = np.roll(P, np.random.randint(0, Ny), axis=1)
+    P = np.roll(P, np.random.randint(0, Nz), axis=2)
+    if np.random.rand() < 0.5:
+        P = np.flip(P, axis=0)
+    if np.random.rand() < 0.5:
+        P = np.flip(P, axis=1)
+    return P
+
 def mosaic_xy(P_e, nx, ny):
     """Tile P_e in x,y to at least nx,ny boxes (random rolls/flips per tile)."""
     Nx, Ny, Nz = P_e.shape
@@ -135,62 +147,64 @@ class LightCone:
 
     def splat_to_grid(self, positions, pressures, volumes, z, Lbox=301.75): 
         """
-        Project scattered gas cells onto the 2D y-map grid using a top-hat kernel.
-        positions : (N,3) positions in comoving Mpc/h
-        pressures : (N,) electron pressure [erg/cm^3]
-        volumes   : (N,) cell volumes [Mpc^3/h^3]
-        z         : redshift of the shell
+        Project gas particles onto a 2D y-map using top-hat kernel.
+
+        positions : (N,3) ndarray in Mpc/h (comoving)
+        pressures : (N,) in erg/cm^3 (comoving or proper)
+        volumes   : (N,) in Mpc^3/h^3
+        z_mid     : float, redshift of the shell
+        D_A       : angular diameter distance in Mpc
         """
-        # --- initialize empty map ---
-        y_map = np.zeros((self.npix, self.npix), dtype=np.float64)
 
-        # pixel angular size in radians
-        dtheta = self.pix_rad
-        pix_coords = (np.arange(self.npix) - self.npix/2 + 0.5) * dtheta
-        theta_x, theta_y = np.meshgrid(pix_coords, pix_coords, indexing="ij")
+        npix = self.npix
+        y_map = np.zeros((npix, npix), dtype=np.float64)
+        dtheta = self.pix_rad  # rad/pixel
 
-        D_A = angular_diameter_distance(z)
+        # convert volumes to cm^3
+        V_cm3 = volumes * (3.085677581e21 / 0.6774)**3  # Mpc^3/h^3 → cm^3
 
-        # loop over cells
-        for (x, y, zpos), P_e, V in zip(positions, pressures, volumes):
-            if zpos <= 0:
-                continue
+        # proper pressure if P_e is comoving
+        P_proper = pressures * (1+z_mid)**3  # erg/cm^3
 
-            # projected angular coords
-            ang_x = x / D_A
-            ang_y = y / D_A
+        # particle angular coordinates
+        theta_x = positions[:,0] / D_A
+        theta_y = positions[:,1] / D_A
 
+        # grid coordinates
+        grid_coords = (np.arange(npix) - npix/2 + 0.5) * dtheta
+        gx, gy = np.meshgrid(grid_coords, grid_coords, indexing="ij")
+
+        for thx, thy, P, V in zip(theta_x, theta_y, P_proper, V_cm3):
             # central pixel
-            i_pix = int(ang_x / dtheta + self.npix/2)
-            j_pix = int(ang_y / dtheta + self.npix/2)
-            if i_pix < 0 or i_pix >= self.npix or j_pix < 0 or j_pix >= self.npix:
+            i_pix = int(np.floor((thx / dtheta) + npix/2))
+            j_pix = int(np.floor((thy / dtheta) + npix/2))
+
+            if i_pix < 0 or i_pix >= npix or j_pix < 0 or j_pix >= npix:
                 continue
 
-            # effective cell radius
-            r_cell = 2.5 * ((3*V)/(4*np.pi))**(1/3)
-            r_pix  = zpos * dtheta
-            s      = min(r_cell, r_pix)
+            # effective radius in cm
+            r_cell_cm = ((3*V)/(4*np.pi))**(1/3)
+            r_pix = r_cell_cm / (D_A * 3.085677581e21) / dtheta  # pixels
 
-            # pixel radius in index units
-            pix_radius = int(np.ceil(s / (zpos*dtheta)))
+            pix_radius = max(1, int(np.ceil(r_pix)))
 
-            # distribute contribution to nearby pixels
-            for di in range(-pix_radius, pix_radius+1):
-                for dj in range(-pix_radius, pix_radius+1):
-                    ii, jj = i_pix+di, j_pix+dj
-                    if ii < 0 or ii >= self.npix or jj < 0 or jj >= self.npix:
-                        continue
-                    # angular distance from pixel center
-                    dx = theta_x[ii,jj] - ang_x
-                    dy = theta_y[ii,jj] - ang_y
-                    dist = zpos * np.sqrt(dx**2 + dy**2)
-                    if dist < s:
-                        # top-hat kernel weight
-                        weight = 1.0
-                        y_map[ii,jj] += P_e * V * weight / (zpos**2)
+            # distribute to neighboring pixels
+            imin = max(0, i_pix-pix_radius)
+            imax = min(npix, i_pix+pix_radius+1)
+            jmin = max(0, j_pix-pix_radius)
+            jmax = min(npix, j_pix+pix_radius+1)
 
-        # prefactor to convert to y
-        prefac = sigma_T / m_e_c2  # (cm^2 / erg)
+            for ii in range(imin, imax):
+                for jj in range(jmin, jmax):
+                    # top-hat kernel: include if within radius
+                    dx = gx[ii,jj] - thx
+                    dy = gy[ii,jj] - thy
+                    dist_cm = D_A * 3.085677581e21 * np.sqrt(dx**2 + dy**2)
+                    if dist_cm <= r_cell_cm:
+                        y_map[ii,jj] += P * V
+
+        # convert to Compton-y
+        prefac = sigma_T / m_e_c2  # cm^2 / erg
         return prefac * y_map
 
 
