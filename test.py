@@ -242,49 +242,57 @@ class LightCone:
         # --- initialize y map ---
         y_map = np.zeros((self.npix, self.npix), dtype=np.float64)
 
-        # --- comoving transverse pixel positions ---
-        theta = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
-        phi   = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
-        theta_grid, phi_grid = np.meshgrid(theta, phi)
+        for z_lo, z_hi, z_mid in zip(self.z_edges[:-1], self.z_edges[1:], self.z_mids):
 
-        # transverse comoving distance
-        D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid)  # Mpc
-        x_pix = D_M * theta_grid
-        y_pix = D_M * phi_grid
+            snap, snap_z = find_snapshot_near(z_mid)
 
-        # scale factor
-        a = 1.0 / (1.0 + z_mid)
+            # --- comoving transverse pixel positions ---
+            theta = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
+            phi   = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
+            theta_grid, phi_grid = np.meshgrid(theta, phi)
 
-        positions, pressures, volumes = self.load_pressure_grid(snap)
+            # transverse comoving distance
+            D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid)  # Mpc
+            x_pix = D_M * theta_grid
+            y_pix = D_M * phi_grid
 
-        # loop over gas cells
-        for i in range(len(positions)):
-            x0, y0, z0 = positions[i]         # comoving Mpc/h
-            R_cell = 2.5 * (3 * volumes[i] / (4 * np.pi))**(1/3)                 # comoving Mpc/h
-            P_cell = pressures[i]               # proper units
-            R_pix = self.pix_rad * D_M
-            if R_cell < R_pix:
-                s = R_pix
-            else:
-                s = R_cell
-            print(f"R_cell = {R_cell}")
-            print(f"s = {s}")
+            # scale factor
+            a = 1.0 / (1.0 + z_mid)
 
-            # proper radius and path length conversion
-            s_proper = s * a              # proper Mpc
-            dl_cm_factor = 3.085677581491367e21  # kpc -> cm
+            pressures, positions, volumes = self.load_pressure_grid(snap)
 
-            # mask pixels within the projected radius
-            r2 = (x_pix - x0)**2 + (y_pix - y0)**2
-            mask = r2 <= s**2
-            if not np.any(mask):
-                continue
+            # loop over gas cells
+            for i in range(len(positions)):
+                x0, y0, z0 = positions[i]
+                #x0 = positions[i,0]         # comoving Mpc/h
+                #y0 = positions[i,1]
+                #z0 = positions[i,2]
+                R_cell = 2.5 * (3 * volumes[i] / (4 * np.pi))**(1/3)                 # comoving Mpc/h
+                P_cell = pressures[i]               # proper units
+                R_pix = self.pix_rad * D_M
+                if R_cell < R_pix:
+                    s = R_pix
+                else:
+                    s = R_cell
+                if i % 1000 == 0:
+                    print(f"R_cell = {R_cell}")
+                    print(f"s = {s}")
 
-            # line-of-sight path length through spherical cell
-            dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a * dl_cm_factor  # cm
+                # proper radius and path length conversion
+                s_proper = s * a              # proper Mpc
+                dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
-            # add SZ contribution
-            y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
+                # mask pixels within the projected radius
+                r2 = (x_pix - x0)**2 + (y_pix - y0)**2
+                mask = r2 <= s**2
+                if not np.any(mask):
+                    continue
+
+                # line-of-sight path length through spherical cell
+                dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a * dl_cm_factor  # cm
+
+                # add SZ contribution
+                y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
 
     
         # --- plot the map ---
