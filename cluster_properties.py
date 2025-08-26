@@ -286,6 +286,7 @@ class ClusterProperties:
         sfr_counter = 0
         positions_all = np.empty((0, self.gas_positions.shape[1]))
         electron_pressure_total = np.array([])
+        gas_volume_total = np.array([])
         for (index, group) in enumerate(self.sample):
             if index % 100 == 0:
                 print("Iteration %s/%s" % (index, len(self.sample)))
