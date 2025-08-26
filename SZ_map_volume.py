@@ -308,14 +308,27 @@ class LightCone:
         return y_shell
 
 
-    def plot_y_map(self, y_map, output=None):
+    def plot_y_map(y_map, fov_deg, output=None):
+        """
+        Plot an SZ y-map (Compton-y) on log scale.
+
+        Parameters
+        ----------
+        y_map : 2D ndarray
+            Compton-y map
+        fov_deg : float
+            Field of view in degrees
+        output : str or None
+            If given, save to this filename. Otherwise show interactively.
+        """
         npix = y_map.shape[0]
-        fov_arcmin = self.fov_deg * 60.0
-        extent = [-fov_arcmin/2, fov_arcmin/2, -fov_arcmin/2, fov_arcmin/2]  # arcmin
+        fov_arcmin = fov_deg * 60.0
+        extent = [-fov_arcmin/2, fov_arcmin/2,
+                  -fov_arcmin/2, fov_arcmin/2]  # arcmin
 
         plt.figure(figsize=(6,5))
         im = plt.imshow(
-            np.log10(y_map + 1e-10),  # log stretch, avoid log(0)
+            np.log10(y_map + 1e-12),   # avoid log(0)
             extent=extent,
             origin="lower",
             cmap="inferno"
@@ -329,11 +342,11 @@ class LightCone:
 
         if output:
             plt.savefig(output, dpi=200, bbox_inches="tight")
-            print(f"Saved figure to {output}")
+            print(f"Saved map to {output}")
         else:
             plt.show()
 
-
+    
     def calc_y(self):
 
         # --- initialize y map ---
