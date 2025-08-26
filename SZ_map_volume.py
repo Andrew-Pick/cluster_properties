@@ -131,57 +131,6 @@ class LightCone:
         else:
             print("%s does not exist!" % (group_dumpfile))
             sys.exit(0)
-          
-
-    def resample_to_shell_grid(self, P_e0, z_mid, box_size_com, dchi):
-
-        P_e = P_e0 * 1.602e-9 / (3.086e21)**3  # convert from keV kpc^-3 to erg cm^-3
-
-        # geometry
-        D_A = angular_diameter_distance(z_mid)             # Mpc
-        D_M = (1.0 + z_mid) * D_A                          # comoving Mpc
-        Lmap_com = D_M * self.fov_rad                      # comoving Mpc
-        nx = max(1, int(np.ceil(Lmap_com / box_size_com)))
-        ny = max(1, int(np.ceil(Lmap_com / box_size_com)))
-
-        # mosaic in x,y
-        P_big = mosaic_xy(P_e, nx, ny)                     # (nx*Nx, ny*Ny, Nz)
-        Nx_big, Ny_big, Nz = P_big.shape
-        dz_com = box_size_com / Nz                         # comoving Mpc/h per slice
-
-        # --- how many full boxes and how many slices from the partial one? ---
-        n_full = int(dchi // box_size_com)                  # e.g. 2 for 2.5 boxes
-        frac  = (dchi / box_size_com) - n_full              # e.g. 0.5
-        n_frac_slices = int(np.round(frac * Nz))            # e.g. ~0.5 * Nz
-        n_frac_slices = max(0, min(n_frac_slices, Nz))      # clamp
-
-        # --- accumulate 2D projection over the shell thickness ---
-        P_accum_2d = np.zeros((Nx_big, Ny_big), dtype=np.float64)
-
-        # full boxes
-        for _ in range(n_full):
-            Pc = _randomise_cube(P_e)
-            # use all Nz slices
-            P_accum_2d += np.sum(Pc, axis=2)
-
-        # partial box (take n_frac_slices)
-        if n_frac_slices > 0:
-            Pc = _randomise_cube(P_e)
-            # pick a random starting slice and wrap if needed
-            z0 = np.random.randint(0, Nz)
-            if z0 + n_frac_slices <= Nz:
-                slab = Pc[:, :, z0:z0 + n_frac_slices]
-            else:
-                # wrap around (periodic)
-                end = (z0 + n_frac_slices) - Nz
-                slab = np.concatenate([Pc[:, :, z0:], Pc[:, :, :end]], axis=2)
-            P_accum_2d += np.sum(slab, axis=2)
-
-        # --- resample to angular pixel grid (npix × npix) ---
-        zoom_xy = (self.npix / Nx_big, self.npix / Ny_big)
-        P_resampled = zoom(P_accum_2d, zoom=zoom_xy, order=1)
-
-        return P_resampled.astype(np.float64), dchi
 
 
     def splat_to_grid(self, positions, pressures, volumes, z, Lbox=301.75): 
