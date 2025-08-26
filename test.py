@@ -252,9 +252,10 @@ class LightCone:
             theta_grid, phi_grid = np.meshgrid(theta, phi)
 
             # transverse comoving distance
-            D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid)  # Mpc
+            D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid) * 1000  # kpc
             x_pix = D_M * theta_grid
             y_pix = D_M * phi_grid
+            #print(f"x_pix = {x_pix}")
 
             # scale factor
             a = 1.0 / (1.0 + z_mid)
@@ -264,37 +265,48 @@ class LightCone:
             # loop over gas cells
             for i in range(len(positions)):
                 x0, y0, z0 = positions[i]
-                #x0 = positions[i,0]         # comoving Mpc/h
+                #x0 = positions[i,0]         # comoving kpc
                 #y0 = positions[i,1]
                 #z0 = positions[i,2]
-                R_cell = 2.5 * (3 * volumes[i] / (4 * np.pi))**(1/3)                 # comoving Mpc/h
-                P_cell = pressures[i]               # proper units
-                R_pix = self.pix_rad * D_M
+                R_cell = 2.5 * (3 * volumes[i] / (4 * np.pi))**(1/3)  # kpc
+                P_cell = pressures[i]               # not in proper units yet
+                R_pix = self.pix_rad * D_M  # kpc
                 if R_cell < R_pix:
                     s = R_pix
                 else:
                     s = R_cell
-                if i % 1000 == 0:
-                    print(f"R_cell = {R_cell}")
-                    print(f"s = {s}")
 
                 # proper radius and path length conversion
-                s_proper = s * a              # proper Mpc
+                s_proper = s * a              # proper kpc
                 dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
                 # mask pixels within the projected radius
                 r2 = (x_pix - x0)**2 + (y_pix - y0)**2
-                mask = r2 <= s**2
+                mask = r2 <= s_proper**2
+                #print(f"r2[mask] = {r2[mask]}")
+                if i % 1000 == 0:
+                    print(f"i = {i}")
+                    print(f"x0 = {x0}")
+                    #print(f"r2 = {r2}")
+                    print(f"s_proper = {s_proper}")
                 if not np.any(mask):
                     continue
 
+                if i % 1000 == 0:
+                    print(f"R_cell = {R_cell}")
+                    print(f"s = {s}")
+                    print(f"r2[mask] = {r2[mask]}")
+
                 # line-of-sight path length through spherical cell
-                dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a * dl_cm_factor  # cm
+                dl = 2.0 * np.sqrt(s_proper**2 - r2[mask]) * a * dl_cm_factor  # cm
+
+                # Convert units keV kpc^-3 to erg cm^-3
+                P_cell = P_cell * 1.6022e-9 / (3.086e21**3)
 
                 # add SZ contribution
                 y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
 
-    
+
         # --- plot the map ---
         self.plot_y_map(y_map)
-       
+
