@@ -66,21 +66,6 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
-def randomise_particles(self, pos, Lbox=301.75):
-    """Apply random periodic shift and random flips to particle positions."""
-    pos_new = pos.copy()
-
-    # random shifts
-    shifts = np.random.uniform(0, Lbox, size=3)
-    pos_new = (pos_new + shifts) % Lbox
-
-    # random flips
-    for axis in range(3):
-        if np.random.rand() < 0.5:
-            pos_new[:,axis] = Lbox - pos_new[:,axis]
-
-    return pos_new
-
 def mosaic_xy(P_e, nx, ny):
     """Tile P_e in x,y to at least nx,ny boxes (random rolls/flips per tile)."""
     Nx, Ny, Nz = P_e.shape
@@ -113,6 +98,22 @@ class LightCone:
         self.z_edges = z_edges
         self.z_mids  = 0.5 * (self.z_edges[:-1] + self.z_edges[1:])
         print(f"Shell midpoints: z = {self.z_mids}")
+
+
+    def randomise_particles(self, pos, Lbox=301.75):
+        """Apply random periodic shift and random flips to particle positions."""
+        pos_new = pos.copy()
+
+        # random shifts
+        shifts = np.random.uniform(0, Lbox, size=3)
+        pos_new = (pos_new + shifts) % Lbox
+
+        # random flips
+        for axis in range(3):
+            if np.random.rand() < 0.5:
+                pos_new[:,axis] = Lbox - pos_new[:,axis]
+
+        return pos_new
 
 
     def load_pressure_grid(self, snap):
@@ -242,69 +243,69 @@ class LightCone:
         return prefac * y_map
 
 
-def resample_shell_particles(self, positions, pressures, volumes, z_mid, dchi, Lbox):
-    """
-    Make a projected SZ map for a redshift shell using kernel splatting on particles.
+    def resample_shell_particles(self, positions, pressures, volumes, z_mid, dchi, Lbox):
+        """
+        Make a projected SZ map for a redshift shell using kernel splatting on particles.
 
-    Parameters
-    ----------
-    positions : (N,3) ndarray
-        Particle positions [Mpc/h, comoving]
-    pressures : (N,) ndarray
-        Electron pressures [erg/cm^3]
-    volumes   : (N,) ndarray
-        Cell volumes [Mpc^3/h^3]
-    z_mid : float
-        Midpoint redshift of shell
-    dchi : float
-        Comoving thickness of the shell [Mpc/h]
-    Lbox : float
-        Size of simulation box [Mpc/h]
-    """
+        Parameters
+        ----------
+        positions : (N,3) ndarray
+            Particle positions [Mpc/h, comoving]
+        pressures : (N,) ndarray
+            Electron pressures [erg/cm^3]
+        volumes   : (N,) ndarray
+            Cell volumes [Mpc^3/h^3]
+        z_mid : float
+            Midpoint redshift of shell
+        dchi : float
+            Comoving thickness of the shell [Mpc/h]
+        Lbox : float
+            Size of simulation box [Mpc/h]
+        """
 
-    # --- geometry ---
-    D_A = angular_diameter_distance(z_mid)        # [Mpc]
-    D_M = (1.0 + z_mid) * D_A                     # comoving [Mpc]
-    Lmap_com = D_M * self.fov_rad                 # transverse comoving size
-    nx = max(1, int(np.ceil(Lmap_com / Lbox)))    # number of tiles in x
-    ny = max(1, int(np.ceil(Lmap_com / Lbox)))    # number of tiles in y
+        # --- geometry ---
+        D_A = angular_diameter_distance(z_mid)        # [Mpc]
+        D_M = (1.0 + z_mid) * D_A                     # comoving [Mpc]
+        Lmap_com = D_M * self.fov_rad                 # transverse comoving size
+        nx = max(1, int(np.ceil(Lmap_com / Lbox)))    # number of tiles in x
+        ny = max(1, int(np.ceil(Lmap_com / Lbox)))    # number of tiles in y
 
-    # --- how many boxes in z (radial) ---
-    n_full = int(dchi // Lbox)        # full boxes
-    frac   = (dchi / Lbox) - n_full   # leftover fraction
-    n_extra = n_full + (1 if frac > 0 else 0)
+        # --- how many boxes in z (radial) ---
+        n_full = int(dchi // Lbox)        # full boxes
+        frac   = (dchi / Lbox) - n_full   # leftover fraction
+        n_extra = n_full + (1 if frac > 0 else 0)
 
-    # --- initialize shell map ---
-    y_shell = np.zeros((self.npix, self.npix), dtype=np.float64)
+        # --- initialize shell map ---
+        y_shell = np.zeros((self.npix, self.npix), dtype=np.float64)
 
-    # --- loop over boxes along z ---
-    for iz in range(n_extra):
-        # randomize particle positions for each box copy
-        pos_rand = self.randomise_particles(positions, Lbox)
+        # --- loop over boxes along z ---
+        for iz in range(n_extra):
+            # randomize particle positions for each box copy
+            pos_rand = self.randomise_particles(positions, Lbox)
 
-        # if this is a fractional box, randomly select a subset along z
-        if (iz == n_full) and (frac > 0):
-            z_extent = frac * Lbox
-            mask = (pos_rand[:,2] < z_extent)
-            pos_rand = pos_rand[mask]
-            pressures_sub = pressures[mask]
-            volumes_sub   = volumes[mask]
-        else:
-            pressures_sub = pressures
-            volumes_sub   = volumes
+            # if this is a fractional box, randomly select a subset along z
+            if (iz == n_full) and (frac > 0):
+                z_extent = frac * Lbox
+                mask = (pos_rand[:,2] < z_extent)
+                pos_rand = pos_rand[mask]
+                pressures_sub = pressures[mask]
+                volumes_sub   = volumes[mask]
+            else:
+                pressures_sub = pressures
+                volumes_sub   = volumes
 
-        # --- loop over x–y tiles ---
-        for ix in range(nx):
-            for iy in range(ny):
-                # shift positions to tile
-                pos_tile = pos_rand.copy()
-                pos_tile[:,0] += ix * Lbox
-                pos_tile[:,1] += iy * Lbox
+            # --- loop over x–y tiles ---
+            for ix in range(nx):
+                for iy in range(ny):
+                    # shift positions to tile
+                    pos_tile = pos_rand.copy()
+                    pos_tile[:,0] += ix * Lbox
+                    pos_tile[:,1] += iy * Lbox
 
-                # splat into map
-                y_shell += self.splat_to_grid(pos_tile, pressures_sub, volumes_sub, z_mid)
+                    # splat into map
+                    y_shell += self.splat_to_grid(pos_tile, pressures_sub, volumes_sub, z_mid)
 
-    return y_shell
+        return y_shell
 
 
     def plot_y_map(self, y_map, output=None):
@@ -361,7 +362,7 @@ def resample_shell_particles(self, positions, pressures, volumes, z_mid, dchi, L
 #            P_proper = P_shell  # If pressure is proper
 
 #            dl_cm = comoving_mpc_to_cm(dchi_com) * a     # cm (proper)
-            dl_cm  = comoving_mpc_to_cm(dchi_com)
+#            dl_cm  = comoving_mpc_to_cm(dchi)
             # Make sure units agree: if P_e is proper, use proper dl;
             # if P_e is comoving, convert appropriately (a factors).
 
