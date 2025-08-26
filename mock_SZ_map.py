@@ -128,6 +128,24 @@ class LightCone:
             print("%s does not exist!" % (group_dumpfile))
             sys.exit(0)
 
+    def grid_pressure(self, pressure, positions, volumes, Ngrid, Lbox=301.75):
+        # Grid electron pressure
+        x = positions[:,0]
+        y = positions[:,1]
+        z = positions[:,2]
+
+        x = np.mod(x,Lbox)  # Wrap positions into [0, Lbox)
+        y = np.mod(y,Lbox)
+        z = np.mod(z,Lbox)
+
+        edges = [np.linspace(0, Lbox, Ngrid+1)] * 3  # Bin edges for the grid
+
+        Pe_grid_sum, _ = np.histogramdd(  # Sum pressure into voxels
+            sample=np.vstack([x, y, z]).T,
+            bins=edges,
+            weights=pressure
+        )
+        print(f"Pressure grid: {Pe_grid_sum}, shape: {Pe_grid_sum.shape}")
 
     def resample_to_shell_grid(self, P_e0, z_mid, box_size_com, dchi):
 

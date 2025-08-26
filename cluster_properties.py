@@ -250,7 +250,7 @@ class ClusterProperties:
             self.gp = group_particles.GroupParticles(self.s, group_part_file, self.snapshot, ptypes=self.fp_ptypes, parttypes=self.fp_parttypes, mass_cut=self.mass_cut, delta=self.delta)
 
 
-    def calc_electron_pressure(self, group_id = -1, Lbox = 301.75, Ngrid = 256):
+    def calc_electron_pressure(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
             pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_pressure.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
             print(pressure_dumpfile)
@@ -326,27 +326,9 @@ class ClusterProperties:
         print(f"Electron pressure total: {electron_pressure_total.shape}")
         print(f"Position all: {positions_all.shape}")
 
-        # Grid electron pressure
-        x = positions_all[:,0]
-        y = positions_all[:,1]
-        z = positions_all[:,2]
-
-        x = np.mod(x,Lbox)  # Wrap positions into [0, Lbox)
-        y = np.mod(y,Lbox)
-        z = np.mod(z,Lbox)
-
-        edges = [np.linspace(0, Lbox, Ngrid+1)] * 3  # Bin edges for the grid
-
-        Pe_grid_sum, _ = np.histogramdd(  # Sum pressure into voxels
-            sample=np.vstack([x, y, z]).T,
-            bins=edges,
-            weights=electron_pressure_total
-        )
-        print(f"Pressure grid: {Pe_grid_sum}, shape: {Pe_grid_sum.shape}")
-
         # Save data
         df = open(pressure_dumpfile,"wb+")
-        pickle.dump((Pe_grid_sum, Lbox, Ngrid),df)
+        pickle.dump((electron_pressure_total, positions_all, gas_volume_total),df)
         df.close
         print(f"Saved at: {pressure_dumpfile}")
 
