@@ -346,7 +346,7 @@ class ClusterProperties:
 
         # Save data
         df = open(pressure_dumpfile,"wb+")
-        pickle.dump((Pe_grid_sum, Lbox, Ngrid, gas_volume_total),df)
+        pickle.dump((Pe_grid_sum, Lbox, Ngrid),df)
         df.close
         print(f"Saved at: {pressure_dumpfile}")
 
