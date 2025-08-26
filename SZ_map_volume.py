@@ -145,7 +145,7 @@ class LightCone:
             sys.exit(0)
 
 
-    def splat_to_grid(self, positions, pressures, volumes, z, Lbox=301.75): 
+    def splat_to_grid(self, positions, pressures, volumes, z, D_A, Lbox=301.75): 
         """
         Project gas particles onto a 2D y-map using top-hat kernel.
 
@@ -164,7 +164,7 @@ class LightCone:
         V_cm3 = volumes * (3.085677581e21 / 0.6774)**3  # Mpc^3/h^3 → cm^3
 
         # proper pressure if P_e is comoving
-        P_proper = pressures * (1+z_mid)**3  # erg/cm^3
+        P_proper = pressures * (1+z)**3  # erg/cm^3
 
         # particle angular coordinates
         theta_x = positions[:,0] / D_A
@@ -185,6 +185,7 @@ class LightCone:
             # effective radius in cm
             r_cell_cm = ((3*V)/(4*np.pi))**(1/3)
             r_pix = r_cell_cm / (D_A * 3.085677581e21) / dtheta  # pixels
+            print(f"r_cell_cm = {r_cell_cm}")
 
             pix_radius = max(1, int(np.ceil(r_pix)))
 
@@ -268,7 +269,7 @@ class LightCone:
                     pos_tile[:,1] += iy * Lbox
 
                     # splat into map
-                    y_shell += self.splat_to_grid(pos_tile, pressures_sub, volumes_sub, z_mid)
+                    y_shell += self.splat_to_grid(pos_tile, pressures_sub, volumes_sub, z_mid, D_A)
 
         return y_shell
 
