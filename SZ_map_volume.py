@@ -308,7 +308,7 @@ class LightCone:
         return y_shell
 
 
-    def plot_y_map(y_map, fov_deg, output=None):
+    def plot_y_map(self, y_map, fov_deg, output=None):
         """
         Plot an SZ y-map (Compton-y) on log scale.
 
@@ -386,7 +386,7 @@ class LightCone:
             y_map += y_shell
 
 
-        self.plot_y_map(y_map)
+        self.plot_y_map(y_map, self.fov_deg)
 
         # 6) add CMB + noise, 7) convolve with beam, 8) matched filter
         # (Use the same matched filter code you already have.)
