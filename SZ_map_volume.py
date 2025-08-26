@@ -149,14 +149,16 @@ class LightCone:
         pix_coords = (np.arange(self.npix) - self.npix/2 + 0.5) * dtheta
         theta_x, theta_y = np.meshgrid(pix_coords, pix_coords, indexing="ij")
 
+        D_A = angular_diameter_distance(z)
+
         # loop over cells
         for (x, y, zpos), P_e, V in zip(positions, pressures, volumes):
             if zpos <= 0:
                 continue
 
             # projected angular coords
-            ang_x = x / zpos
-            ang_y = y / zpos
+            ang_x = x / D_A
+            ang_y = y / D_A
 
             # central pixel
             i_pix = int(ang_x / dtheta + self.npix/2)
