@@ -5,6 +5,7 @@ import h5py
 import pickle
 from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
+from scipy.spatial import cKDTree
 
 np.random.seed(1273)
 
@@ -208,7 +209,7 @@ class LightCone:
             np.log10(y_map + 1e-10),  # log stretch, avoid log(0)
             extent=extent,
             origin="lower",
-            cmap="inferno"
+            cmap="viridis"
         )
         cbar = plt.colorbar(im)
         cbar.set_label(r"$\log_{10}(y)$")
@@ -260,10 +261,17 @@ class LightCone:
             y_pix = D_M * phi_grid
             #print(f"x_pix = {x_pix}")
 
+            # Flatten into a (Npix^2, 2) array of pixel centers
+            pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
+            tree = cKDTree(pix_coords)
+
             # scale factor
             a = 1.0 / (1.0 + z_mid)
 
             pressures, positions, volumes = self.load_pressure_grid(snap)
+
+            R_pix = self.pix_rad * D_M  # kpc
+            print(f"R_pix = {R_pix}")
 
             # loop over gas cells
             for i in range(len(pressures)):
@@ -273,7 +281,6 @@ class LightCone:
                 #z0 = positions[i,2]
                 R_cell = 2.5 * (3 * volumes[i] / (4 * np.pi))**(1/3)  # kpc
                 P_cell = pressures[i]               # not in proper units yet
-                R_pix = self.pix_rad * D_M  # kpc
                 if R_cell < R_pix:
                     s = R_pix
                 else:
@@ -283,19 +290,26 @@ class LightCone:
                 s_proper = s * a              # proper kpc
                 dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
+                # find all pixel centers within radius R
+                idxs = tree.query_ball_point([x0, y0], r=s)
+                if not idxs:
+                    continue
+
                 # mask pixels within the projected radius
-                r2 = (x_pix - x0)**2 + (y_pix - y0)**2
+                pix_xy = pix_coords[idxs]
+                r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
                 mask = r2 <= s_proper**2
                 #print(f"r2[mask] = {r2[mask]}")
-                if i % 1000 == 0:
+                if i % 10000 == 0:
+                    print(f"z_mid = {z_mid}")
                     print(f"i = {i}")
-                    print(f"x0 = {x0}")
+                    #print(f"x0 = {x0}")
                     #print(f"r2 = {r2}")
-                    print(f"s_proper = {s_proper}")
+                    #print(f"s_proper = {s_proper}")
                 if not np.any(mask):
                     continue
 
-                if i % 1000 == 0:
+                if i % 10000 == 0:
                     print(f"R_cell = {R_cell}")
                     print(f"s = {s}")
                     print(f"r2[mask] = {r2[mask]}")
@@ -307,7 +321,8 @@ class LightCone:
                 P_cell = P_cell * 1.6022e-9 / (3.086e21**3)
 
                 # add SZ contribution
-                y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
+                flat_idxs = np.array(idxs)[mask]
+                y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
 
 
         # --- plot the map ---
