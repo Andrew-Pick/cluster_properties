@@ -218,13 +218,16 @@ class LightCone:
         plt.title("Mock SZ y-map")
 
         if output:
-            plt.savefig(output, dpi=200, bbox_inches="tight")
+            directory = os.path.dirname("/cosma/home/dp203/dc-pick1/cluster_properties/plots/SZ_maps/")
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            plt.savefig(f"{directory}{output}.pdf", dpi=200, bbox_inches="tight")
             print(f"Saved figure to {output}")
         else:
             plt.show()
 
 
-    def calc_y(self):
+    def calc_y(self, output=None):
         """
         Compute the SZ y-map using gas-cell contributions with spherical kernel.
     
@@ -308,5 +311,5 @@ class LightCone:
 
 
         # --- plot the map ---
-        self.plot_y_map(y_map)
+        self.plot_y_map(y_map, output=output)
 
