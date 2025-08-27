@@ -221,7 +221,7 @@ class LightCone:
             directory = os.path.dirname("/cosma/home/dp203/dc-pick1/cluster_properties/plots/SZ_maps/")
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            plt.savefig(f"{directory}{output}.pdf", dpi=200, bbox_inches="tight")
+            plt.savefig(f"/cosma/home/dp203/dc-pick1/cluster_properties/plots/SZ_maps/{output}.pdf", dpi=200, bbox_inches="tight")
             print(f"Saved figure to {output}")
         else:
             plt.show()
@@ -250,8 +250,8 @@ class LightCone:
             snap, snap_z = find_snapshot_near(z_mid)
 
             # --- comoving transverse pixel positions ---
-            theta = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
-            phi   = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
+            theta = np.linspace(0, self.fov_rad, self.npix)
+            phi   = np.linspace(0, self.fov_rad, self.npix)
             theta_grid, phi_grid = np.meshgrid(theta, phi)
 
             # transverse comoving distance
@@ -266,7 +266,7 @@ class LightCone:
             pressures, positions, volumes = self.load_pressure_grid(snap)
 
             # loop over gas cells
-            for i in range(len(positions)):
+            for i in range(len(pressures)):
                 x0, y0, z0 = positions[i]
                 #x0 = positions[i,0]         # comoving kpc
                 #y0 = positions[i,1]
