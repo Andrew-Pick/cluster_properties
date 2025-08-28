@@ -19,7 +19,7 @@ def comoving_distance(z):
     cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)
     d_comoving = cosmo.comoving_distance(z).value  # in Mpc
     print(f"Comoving distance at z={z} is {d_comoving:.2f}")
-    return d_comoving*0.6774
+    return d_comoving # * 0.6774
 
 def angular_diameter_distance(z):
     cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)  # matches your simulation
@@ -67,6 +67,19 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
+def _rand_shift_flip_1d(pos, L):
+    """
+    Apply a single random periodic shift and an optional flip around L/2.
+    Vectorized for speed. Returns transformed coord in [0, L).
+    """
+    # random uniform shift in [0,L)
+    s = np.random.uniform(0.0, L)
+    # optional flip about center
+    if np.random.rand() < 0.5:
+        pos = (L - pos)
+    pos = (pos + s) % L
+    return pos
+
 def _randomise_cube(P):
     """Random periodic shift + random flips."""
     Nx, Ny, Nz = P.shape
@@ -98,6 +111,7 @@ class LightCone:
         self.realisation = realisation
         self.delta = delta
         self.file_ending = file_ending
+        self.Lbox = 301.75 * 1000  # kpc
 
          # --- your instrument / map setup ---
         self.fov_deg   = fov_deg
@@ -228,7 +242,7 @@ class LightCone:
             plt.show()
 
 
-    def calc_y(self, output=None):
+    def calc_y(self, output=None, Lbox = self.Lbox):
         """
         Compute the SZ y-map using gas-cell contributions with spherical kernel.
     
@@ -250,28 +264,94 @@ class LightCone:
 
             snap, snap_z = find_snapshot_near(z_mid)
 
+            pressures, positions, volumes = self.load_pressure_grid(snap)
+
+            # scale factor
+            a = 1.0 / (1.0 + z_mid)
+
+            # transverse comoving distance
+            D_M = (1 / a) * angular_diameter_distance(z_mid) * 1000  # kpc
+
+            # FOV in comoving kpc at shell
+            Lmap_com_kpc = D_M * self.fov_rad
+
+            # How many tiles in x,y?
+            nx = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
+            ny = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
+
             # --- comoving transverse pixel positions ---
             theta = np.linspace(0, self.fov_rad, self.npix)
             phi   = np.linspace(0, self.fov_rad, self.npix)
             theta_grid, phi_grid = np.meshgrid(theta, phi)
-
-            # transverse comoving distance
-            D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid) * 1000  # kpc
             x_pix = D_M * theta_grid
             y_pix = D_M * phi_grid
-            #print(f"x_pix = {x_pix}")
 
             # Flatten into a (Npix^2, 2) array of pixel centers
             pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
             tree = cKDTree(pix_coords)
 
-            # scale factor
-            a = 1.0 / (1.0 + z_mid)
-
-            pressures, positions, volumes = self.load_pressure_grid(snap)
-
             R_pix = self.pix_rad * D_M  # kpc
             print(f"R_pix = {R_pix}")
+
+            # Shell comoving thickness in *kpc* (comoving)
+            chi_lo = comoving_distance(z_lo) * 1000  # kpc
+            chi_hi = comoving_distance(z_hi) * 1000  # kpc
+            dchi = (chi_hi - chi_lo)  # kpc
+
+            # LOS tiling counts
+            n_full = int(dchi // Lbox)
+            frac   = (dchi / Lbox) - n_full
+            slab_kpc = max(0.0, min(frac * Lbox, Lbox))
+
+            # Pre-compute per-cell (proper) pressure conversion ONCE
+            # pressures are in keV kpc^-3 (comoving) in your pickles (per your comments);
+            # convert to erg cm^-3 (proper). The factor a^3 would enter if converting comoving to proper densities;
+            # if your pressures are already *proper* electron pressure, remove the a^3.
+            P_cgs = pressures * 1.6022e-9 / (3.086e21**3)   # erg cm^-3
+            # If needed, uncomment to apply proper/comoving conversion:
+            P_cgs = P_cgs * a**3
+
+            # Pre-compute cell radius from volume (in kpc^3 comoving), then convert to proper inside loop
+            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # kpc
+
+            # Helper to accumulate contributions for a given transformed (x,y) and selection mask
+            def accumulate_for_copy(xc, yc, sel_mask):
+                # choose effective radius in the screen plane per cell
+                # (max of pixel radius and cell radius), all in comoving kpc
+                s_kpc = np.maximum(R_cell_kpc[sel_mask], R_pix)
+
+                # select neighbor pixels within s_kpc for each selected cell
+                # (loop over the *selected* cells only)
+                idx_sel = np.flatnonzero(sel_mask)
+                flat = y_map.ravel()
+                dl_cm_factor = 3.085677581491367e21  # kpc -> cm
+
+                for jj in idx_sel:
+                    x0 = xc[jj]
+                    y0 = yc[jj]
+                    s  = s_kpc[jj]
+
+                    # query pixels within s (comoving)
+                    idxs = tree.query_ball_point([x0, y0], r=float(s))
+                    if not idxs:
+                        continue
+
+                    pix_xy = pix_coords[idxs]
+                    r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
+
+                    # convert to *proper* radius for LOS thickness
+                    s_prop_kpc = s * a
+
+                    mask = r2 <= s_prop_kpc**2
+                    if not np.any(mask):
+                        continue
+
+                    # LOS chord length (proper kpc), then to cm
+                    dl_cm = 2.0 * np.sqrt(s_prop_kpc**2 - r2[mask]) * a * dl_cm_factor
+
+                    # add SZ contribution
+                    flat_idxs = np.array(idxs, dtype=np.int64)[mask]
+                    flat[flat_idxs] += (sigma_T / m_e_c2) * P_cgs[jj] * dl_cm
 
             # loop over gas cells
             for i in range(len(pressures)):
