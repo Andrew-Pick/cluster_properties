@@ -158,6 +158,7 @@ class LightCone:
         print(f"Lmap = {Lmap_com}")
         nx = max(1, int(np.ceil(Lmap_com / box_size_com)))
         ny = max(1, int(np.ceil(Lmap_com / box_size_com)))
+        print(f"nx = {nx}, ny = {ny}")
 
         # mosaic in x,y
         P_big = mosaic_xy(P_e, nx, ny)                     # (nx*Nx, ny*Ny, Nz)
