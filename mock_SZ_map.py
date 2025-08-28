@@ -155,6 +155,7 @@ class LightCone:
         D_A = angular_diameter_distance(z_mid)             # Mpc
         D_M = (1.0 + z_mid) * D_A                          # comoving Mpc
         Lmap_com = D_M * self.fov_rad                      # comoving Mpc
+        print(f"Lmap = {Lmap_com}")
         nx = max(1, int(np.ceil(Lmap_com / box_size_com)))
         ny = max(1, int(np.ceil(Lmap_com / box_size_com)))
 
