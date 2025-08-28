@@ -280,6 +280,7 @@ class LightCone:
 
             # FOV in comoving kpc at shell
             Lmap_com_kpc = D_M * self.fov_rad
+            print(f"Lmap = {Lmap_com_kpc}")
 
             # How many tiles in x,y?
             nx = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
@@ -353,7 +354,7 @@ class LightCone:
                         continue
 
                     # LOS chord length (proper kpc), then to cm
-                    dl_cm = 2.0 * np.sqrt(s_prop_kpc**2 - r2[mask]) * a * dl_cm_factor
+                    dl_cm = 2.0 * np.sqrt(s_prop_kpc**2 - r2[mask]) * dl_cm_factor
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs, dtype=np.int64)[mask]
@@ -393,6 +394,8 @@ class LightCone:
                             x_off = ix * Lbox
                             y_off = iy * Lbox
                             accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=sel)
+
+            print(f"z={z_mid:.3f}: nx={nx}, ny={ny}, n_full={n_full}, slab={slab_kpc/Lbox:.2f} box")
 
             ''' # loop over gas cells
             for i in range(len(pressures)):
