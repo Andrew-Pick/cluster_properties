@@ -353,8 +353,43 @@ class LightCone:
                     flat_idxs = np.array(idxs, dtype=np.int64)[mask]
                     flat[flat_idxs] += (sigma_T / m_e_c2) * P_cgs[jj] * dl_cm
 
+            # ---------- Transverse mosaics and LOS stacking ----------
+            # For each LOS copy k (full boxes): use ALL cells with fresh random transforms
+            for k in range(n_full):
+                # random periodic transform per copy (independent for x,y)
+                x_t = _rand_shift_flip_1d(x, Lbox)
+                y_t = _rand_shift_flip_1d(y, Lbox)
+
+                # Tile in x,y to cover the FOV
+                for ix in range(nx):
+                    for iy in range(ny):
+                        # Global offsets to put this tile at (ix,iy)
+                        x_off = ix * Lbox
+                        y_off = iy * Lbox
+                        accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=np.ones_like(x, dtype=bool))
+
+            # Fractional end-slab: take only a random z-slab of thickness slab_kpc
+            if slab_kpc > 0.0:
+                # choose random slab start in [0, Lbox)
+                z0 = np.random.uniform(0.0, Lbox)
+                z1 = (z0 + slab_kpc)
+                if z1 <= Lbox:
+                    sel = (z >= z0) & (z < z1)
+                else:
+                    # wraps around the periodic boundary
+                    sel = (z >= z0) | (z < (z1 - Lbox))
+
+                if np.any(sel):
+                    x_t = _rand_shift_flip_1d(x, Lbox)
+                    y_t = _rand_shift_flip_1d(y, Lbox)
+                    for ix in range(nx):
+                        for iy in range(ny):
+                            x_off = ix * Lbox
+                            y_off = iy * Lbox
+                            accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=sel)
+
             # loop over gas cells
-            for i in range(len(pressures)):
+'''            for i in range(len(pressures)):
                 x0, y0, z0 = positions[i]
                 #x0 = positions[i,0]         # comoving kpc
                 #y0 = positions[i,1]
@@ -403,7 +438,7 @@ class LightCone:
                 # add SZ contribution
                 flat_idxs = np.array(idxs)[mask]
                 y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
-
+'''
 
         # --- plot the map ---
         self.plot_y_map(y_map, output=output)
