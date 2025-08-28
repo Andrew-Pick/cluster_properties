@@ -242,7 +242,7 @@ class LightCone:
             plt.show()
 
 
-    def calc_y(self, output=None, Lbox = self.Lbox):
+    def calc_y(self, output=None):
         """
         Compute the SZ y-map using gas-cell contributions with spherical kernel.
     
@@ -257,6 +257,8 @@ class LightCone:
         z_mid : float
             Redshift of the shell
         """
+        Lbox = self.Lbox
+
         # --- initialize y map ---
         y_map = np.zeros((self.npix, self.npix), dtype=np.float64)
 
@@ -265,6 +267,10 @@ class LightCone:
             snap, snap_z = find_snapshot_near(z_mid)
 
             pressures, positions, volumes = self.load_pressure_grid(snap)
+
+            x = positions[:,0] % Lbox
+            y = positions[:,1] % Lbox
+            z = positions[:,2] % Lbox
 
             # scale factor
             a = 1.0 / (1.0 + z_mid)
@@ -388,8 +394,8 @@ class LightCone:
                             y_off = iy * Lbox
                             accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=sel)
 
-            # loop over gas cells
-'''            for i in range(len(pressures)):
+            ''' # loop over gas cells
+            for i in range(len(pressures)):
                 x0, y0, z0 = positions[i]
                 #x0 = positions[i,0]         # comoving kpc
                 #y0 = positions[i,1]
@@ -438,7 +444,7 @@ class LightCone:
                 # add SZ contribution
                 flat_idxs = np.array(idxs)[mask]
                 y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
-'''
+		'''
 
         # --- plot the map ---
         self.plot_y_map(y_map, output=output)
