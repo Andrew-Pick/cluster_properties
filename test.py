@@ -329,13 +329,13 @@ class LightCone:
                 # select neighbor pixels within s_kpc for each selected cell
                 # (loop over the *selected* cells only)
                 idx_sel = np.flatnonzero(sel_mask)
+                s_kpc_sel = np.maximum(R_cell_kpc[sel_mask], R_pix)
                 flat = y_map.ravel()
                 dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
-                for jj in idx_sel:
+                for jj, s in zip(idx_sel, s_kpc_sel):
                     x0 = xc[jj]
                     y0 = yc[jj]
-                    s  = s_kpc[jj]
 
                     # query pixels within s (comoving)
                     idxs = tree.query_ball_point([x0, y0], r=float(s))
