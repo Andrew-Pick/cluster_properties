@@ -111,7 +111,7 @@ class LightCone:
         self.realisation = realisation
         self.delta = delta
         self.file_ending = file_ending
-        self.Lbox = 301.75 * 1000  # kpc
+        self.Lbox = 301.75 * 1000 / 0.6774  # kpc
 
          # --- your instrument / map setup ---
         self.fov_deg   = fov_deg
@@ -276,7 +276,7 @@ class LightCone:
             a = 1.0 / (1.0 + z_mid)
 
             # transverse comoving distance
-            D_M = (1 / a) * angular_diameter_distance(z_mid) * 1000  # kpc
+            D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid) * 1000  # kpc
 
             # FOV in comoving kpc at shell
             Lmap_com_kpc = D_M * self.fov_rad
@@ -287,8 +287,8 @@ class LightCone:
             ny = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
 
             # --- comoving transverse pixel positions ---
-            theta = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
-            phi   = np.linspace(-self.fov_rad/2, self.fov_rad/2, self.npix)
+            theta = np.linspace(0, self.fov_rad, self.npix)
+            phi   = np.linspace(0, self.fov_rad, self.npix)
             theta_grid, phi_grid = np.meshgrid(theta, phi)
             x_pix = D_M * theta_grid
             y_pix = D_M * phi_grid
