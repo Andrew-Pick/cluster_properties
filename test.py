@@ -293,8 +293,8 @@ class LightCone:
             y_pix = D_M * phi_grid
 
             # Flatten into a (Npix^2, 2) array of pixel centers
-#            pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
-#            tree = cKDTree(pix_coords)
+            pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
+            tree = cKDTree(pix_coords)
 
             R_pix = self.pix_rad * D_M  # kpc
 #            print(f"R_pix = {R_pix}")
@@ -423,14 +423,14 @@ class LightCone:
                 dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
                 # find all pixel centers within radius R
-#                idxs = tree.query_ball_point([x0, y0], r=s)
-#                if not idxs:
-#                    continue
+                idxs = tree.query_ball_point([x0, y0], r=s)
+                if not idxs:
+                    continue
 
                 # mask pixels within the projected radius
-#                pix_xy = pix_coords[idxs]
-#                r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
-                r2 = (x_pix - x0)**2 + (y_pix - y0)**2
+                pix_xy = pix_coords[idxs]
+                r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
+#                r2 = (x_pix - x0)**2 + (y_pix - y0)**2
                 mask = r2 <= s_proper**2
                 #print(f"r2[mask] = {r2[mask]}")
                 if i % 10000 == 0:
@@ -454,9 +454,9 @@ class LightCone:
                 P_cell = P_cell * 1.6022e-9 / (3.086e21**3)
 
                 # add SZ contribution
-#                flat_idxs = np.array(idxs)[mask]
-#                y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
-                y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
+                flat_idxs = np.array(idxs)[mask]
+                y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
+#                y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
                 
 
         # --- plot the map ---
