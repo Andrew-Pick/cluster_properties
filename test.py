@@ -67,17 +67,25 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
-def _rand_shift_flip_1d(pos):
+def _rand_shift_flip_3d(pos, L):
     """
     Apply a single random periodic shift and an optional flip around L/2.
     Vectorized for speed. Returns transformed coord in [0, L).
     """
+    pos = np.array(pos, copy=True)
+
     # random uniform shift in [0,L)
-    pos = np.roll(pos, np.random.randint(0, pos.shape))
+    s = np.random.uniform(0, L, size=3)
     # optional flip about center
     if np.random.rand() < 0.5:
-        pos = np.flip(pos)
+        pos[:,0] = (L - pos[:,0])
+    if np.random.rand() < 0.5:
+        pos[:,1] = (L - pos[:,1])
+    if np.random.rand() < 0.5:
+        pos[:,2] = (L - pos[:,2])
+    pos = (pos + s) % L
     return pos
+
 
 def _randomise_cube(P):
     """Random periodic shift + random flips."""
@@ -307,7 +315,7 @@ class LightCone:
             # LOS tiling counts
             n_full = int(dchi // Lbox)
             frac   = (dchi / Lbox) - n_full
-            slab_kpc = max(0.0, min(frac * Lbox, Lbox))
+            partial_thickness = max(0.0, min(frac * Lbox, Lbox))
 
             # Pre-compute per-cell (proper) pressure conversion ONCE
             # pressures are in keV kpc^-3 (comoving) in your pickles (per your comments);
@@ -405,59 +413,81 @@ class LightCone:
             print(f"z={z_mid:.3f}: nx={nx}, ny={ny}, n_full={n_full}, slab={slab_kpc/Lbox:.2f} box")
             '''
 
-             # loop over gas cells
-            for i in range(len(pressures)):
-                x0, y0, z0 = positions[i]
-                #x0 = positions[i,0]         # comoving kpc
-                #y0 = positions[i,1]
-                #z0 = positions[i,2]
-                R_cell = 2.5 * (3 * volumes[i] / (4 * np.pi))**(1/3)  # kpc
-                P_cell = pressures[i]               # not in proper units yet
-                if R_cell < R_pix:
-                    s = R_pix
-                else:
-                    s = R_cell
+            def add_to_y_map(P, pos, R):
+                # loop over gas cells
+                for i in range(len(pos)):
+                    x0, y0, z0 = pos[i]
+                    #x0 = positions[i,0]         # comoving kpc
+                    #y0 = positions[i,1]
+                    #z0 = positions[i,2]
+                    R_cell = R[i]  # kpc
+                    P_cell = P[i]               # not in proper units yet
+                    if R_cell < R_pix:
+                        s = R_pix
+                    else:
+                        s = R_cell
+                    if i % 50000 == 0:
+                        print("Processing...")
 
-                # proper radius and path length conversion
-                s_proper = s * a              # proper kpc
-                dl_cm_factor = 3.085677581491367e21  # kpc -> cm
+                    # proper radius and path length conversion
+                    s_proper = s * a              # proper kpc
+                    dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
-                # find all pixel centers within radius R
-                idxs = tree.query_ball_point([x0, y0], r=s)
-                if not idxs:
-                    continue
+                    # find all pixel centers within radius R
+                    idxs = tree.query_ball_point([x0, y0], r=s)
+                    if not idxs:
+                        continue
 
-                # mask pixels within the projected radius
-                pix_xy = pix_coords[idxs]
-                r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
-#                r2 = (x_pix - x0)**2 + (y_pix - y0)**2
-                mask = r2 <= s_proper**2
-                #print(f"r2[mask] = {r2[mask]}")
-                if i % 10000 == 0:
-                    print(f"z_mid = {z_mid}")
-                    print(f"i = {i}")
-                    #print(f"x0 = {x0}")
-                    #print(f"r2 = {r2}")
-                    #print(f"s_proper = {s_proper}")
-                if not np.any(mask):
-                    continue
+                    # mask pixels within the projected radius
+                    pix_xy = pix_coords[idxs]
+                    r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
+#                    r2 = (x_pix - x0)**2 + (y_pix - y0)**2
+                    mask = r2 <= s_proper**2
+                    #print(f"r2[mask] = {r2[mask]}")
+                    if i % 50000 == 0:
+                        print(f"z_mid = {z_mid}")
+                        print(f"i = {i}")
+                        #print(f"x0 = {x0}")
+                        #print(f"r2 = {r2}")
+                        #print(f"s_proper = {s_proper}")
+                    if not np.any(mask):
+                        continue
 
-                if i % 10000 == 0:
-                    print(f"R_cell = {R_cell}")
-                    print(f"s = {s}")
-                    print(f"r2[mask] = {r2[mask]}")
+                    if i % 50000 == 0:
+                        print(f"R_cell = {R_cell}")
+                        print(f"s = {s}")
+                        print(f"r2[mask] = {r2[mask]}")
 
-                # line-of-sight path length through spherical cell
-                dl = 2.0 * np.sqrt(s_proper**2 - r2[mask]) * a * dl_cm_factor  # cm
+                    # line-of-sight path length through spherical cell
+                    dl = 2.0 * np.sqrt(s_proper**2 - r2[mask]) * a * dl_cm_factor  # kpc
 
-                # Convert units keV kpc^-3 to erg cm^-3
-                P_cell = P_cell * 1.6022e-9 / (3.086e21**3)
+                    # Convert units keV kpc^-3 to erg cm^-3
+                    P_cell = P_cell * 1.6022e-9 / (3.086e21**3)
 
-                # add SZ contribution
-                flat_idxs = np.array(idxs)[mask]
-                y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
-#                y_map[mask] += (sigma_T / m_e_c2) * P_cell * dl
+                    # add SZ contribution
+                    flat_idxs = np.array(idxs)[mask]
+                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
                 
+            # full boxes
+            for _ in range(n_full):
+                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc)
+                print(f"min pos = {np.min(pos)}")
+                add_to_y_map(pressures, pos, R_cell_kpc)
+
+            # partial box (take n_frac_slices)
+            if partial_thickness > 0:
+                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc)
+                zpos = pos[:, 2]
+
+                # pick a random starting slice and wrap if needed
+                z0 = np.random.uniform(0, Lbox)
+                zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
+                       if z0 + partial_thickness <= Lbox else \
+                       ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
+                pos_partial = pos[zsel]
+                P_partial   = pressures[zsel]
+                R_partial   = R_cell_kpc[zsel]
+                add_to_y_map(P_partial, pos_partial, R_partial)
 
         # --- plot the map ---
         self.plot_y_map(y_map, output=output)
