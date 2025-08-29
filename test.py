@@ -286,8 +286,8 @@ class LightCone:
             ny = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
 
             # --- comoving transverse pixel positions ---
-            theta = np.linspace(self.fov_rad, 2*self.fov_rad, self.npix)
-            phi   = np.linspace(self.fov_rad, 2*self.fov_rad, self.npix)
+            theta = np.linspace(0, self.fov_rad, self.npix)
+            phi   = np.linspace(0, self.fov_rad, self.npix)
             theta_grid, phi_grid = np.meshgrid(theta, phi)
             x_pix = D_M * theta_grid
             y_pix = D_M * phi_grid
