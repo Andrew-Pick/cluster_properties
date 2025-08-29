@@ -18,7 +18,7 @@ m_e_c2  = 8.18710565e-7     # erg
 def comoving_distance(z):
     cosmo = FlatLambdaCDM(H0=67.74, Om0=0.3089)
     d_comoving = cosmo.comoving_distance(z).value  # in Mpc
-    print(f"Comoving distance at z={z} is {d_comoving:.2f}")
+    print(f"Comoving distance at z={z} is {d_comoving:.2f} Mpc")
     return d_comoving # * 0.6774
 
 def angular_diameter_distance(z):
@@ -271,6 +271,7 @@ class LightCone:
             snap, snap_z = find_snapshot_near(z_mid)
 
             pressures, positions, volumes = self.load_pressure_grid(snap)
+            print(f"Min position = {np.min(positions)}")
 
             # scale factor
             a = 1.0 / (1.0 + z_mid)
@@ -282,10 +283,6 @@ class LightCone:
             Lmap_com_kpc = D_M * self.fov_rad
             print(f"Lmap = {Lmap_com_kpc}")
 
-            # How many tiles in x,y?
-            nx = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
-            ny = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
-
             # --- comoving transverse pixel positions ---
             theta = np.linspace(0, self.fov_rad, self.npix)
             phi   = np.linspace(0, self.fov_rad, self.npix)
@@ -296,6 +293,7 @@ class LightCone:
             # Flatten into a (Npix^2, 2) array of pixel centers
             pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
             tree = cKDTree(pix_coords)
+            print(f"pix_coords = {pix_coords}")
 
             R_pix = self.pix_rad * D_M  # kpc
             print(f"R_pix = {R_pix}")
@@ -306,10 +304,9 @@ class LightCone:
             dchi = (chi_hi - chi_lo)  # kpc
 
             # --- how many full boxes and how many slices from the partial one? ---
-            n_full = int(dchi // box_size_com)                  # e.g. 2 for 2.5 boxes
-            frac  = (dchi / box_size_com) - n_full              # e.g. 0.5
-            n_frac_slices = int(np.round(frac * Nz))            # e.g. ~0.5 * Nz
-            n_frac_slices = max(0, min(n_frac_slices, Nz))      # clamp
+            n_full = int(dchi // Lbox)                  # e.g. 2 for 2.5 boxes
+            frac  = (dchi / Lbox) - n_full              # e.g. 0.5
+            partial_thickness = frac * Lbox
 
             # Pre-compute per-cell (proper) pressure conversion ONCE
             # pressures are in keV kpc^-3 (comoving) in your pickles (per your comments);
@@ -322,32 +319,17 @@ class LightCone:
             # Pre-compute cell radius from volume (in kpc^3 comoving), then convert to proper inside loop
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # kpc
 
-            # full boxes
-            for _ in range(n_full):
-                pos = _rand_shift_flip_3d(positions)
-                add_to_ymap(P_cgs, pos, R_cell_kpc)
 
-            # partial box (take n_frac_slices)
-            if n_frac_slices > 0:
-                pos = _rand_shift_flip_3d(positions)
-                Nz = positions.shape[2]
-                # pick a random starting slice and wrap if needed
-                z0 = np.random.randint(0, Nz)
-                if z0 + n_frac_slices <= Nz:
-                    slab = pos[:, :, z0:z0 + n_frac_slices]
-                else:
-                    # wrap around (periodic)
-                    end = (z0 + n_frac_slices) - Nz
-                    slab = np.concatenate([pos[:, :, z0:], pos[:, :, :end]], axis=2)
-                add_to_ymap(P_cgs, slab, R_cell_kpc)
-            
             # loop over gas cells
             def add_to_y_map(P, pos, R):
-                for i in range(len(pressures)):
+                for i in range(len(P)):
                     R_cell = R[i]
                     x0, y0, z0 = pos[i]
                     P_cell = P[i]  # not in proper units yet
-                    s = np.max(R_pix, R_cell)
+                    s = np.max(np.array([R_pix, R_cell]))
+                    if i % 50000 == 0:
+                        print(f"Processing cell {i}")
+                        print(f"s = {s}")
 
                     # proper radius and path length conversion
                     s_proper = s * a              # proper kpc
@@ -383,6 +365,28 @@ class LightCone:
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
                     y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
+
+
+            # full boxes
+            for _ in range(n_full):
+                pos = _rand_shift_flip_3d(positions, Lbox)
+                print(f"min pos = {np.min(pos)}")
+                add_to_y_map(P_cgs, pos, R_cell_kpc)
+
+            # partial box (take n_frac_slices)
+            if partial_thickness > 0:
+                pos = _rand_shift_flip_3d(positions, Lbox)
+                zpos = pos[:, 2]
+
+                # pick a random starting slice and wrap if needed
+                z0 = np.random.uniform(0, Lbox)
+                zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
+                       if z0 + partial_thickness <= Lbox else \
+                       ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
+                pos_partial = pos[zsel]
+                P_partial   = P_cgs[zsel]
+                R_partial   = R_cell_kpc[zsel]
+                add_to_y_map(P_partial, pos_partial, R_partial)
 
         # --- plot the map ---
         self.plot_y_map(y_map, output=output)

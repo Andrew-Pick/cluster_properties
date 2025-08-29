@@ -7,7 +7,7 @@ from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 
-np.random.seed(1273)
+#np.random.seed(1273)
 
 # --- constants in cgs ---
 sigma_T = 6.6524587158e-25  # cm^2
@@ -67,17 +67,16 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
-def _rand_shift_flip_1d(pos, L):
+def _rand_shift_flip_1d(pos):
     """
     Apply a single random periodic shift and an optional flip around L/2.
     Vectorized for speed. Returns transformed coord in [0, L).
     """
     # random uniform shift in [0,L)
-    s = np.random.uniform(0.0, L)
+    pos = np.roll(pos, np.random.randint(0, pos.shape))
     # optional flip about center
     if np.random.rand() < 0.5:
-        pos = (L - pos)
-    pos = (pos + s) % L
+        pos = np.flip(pos)
     return pos
 
 def _randomise_cube(P):
@@ -287,8 +286,8 @@ class LightCone:
             ny = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
 
             # --- comoving transverse pixel positions ---
-            theta = np.linspace(0, self.fov_rad, self.npix)
-            phi   = np.linspace(0, self.fov_rad, self.npix)
+            theta = np.linspace(self.fov_rad, 2*self.fov_rad, self.npix)
+            phi   = np.linspace(self.fov_rad, 2*self.fov_rad, self.npix)
             theta_grid, phi_grid = np.meshgrid(theta, phi)
             x_pix = D_M * theta_grid
             y_pix = D_M * phi_grid
@@ -316,7 +315,7 @@ class LightCone:
             # if your pressures are already *proper* electron pressure, remove the a^3.
             P_cgs = pressures * 1.6022e-9 / (3.086e21**3)   # erg cm^-3
             # If needed, uncomment to apply proper/comoving conversion:
-            P_cgs = P_cgs * a**3
+            #P_cgs = P_cgs * a**3
 
             # Pre-compute cell radius from volume (in kpc^3 comoving), then convert to proper inside loop
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # kpc
@@ -326,20 +325,24 @@ class LightCone:
                 # choose effective radius in the screen plane per cell
                 # (max of pixel radius and cell radius), all in comoving kpc
                 s_kpc = np.maximum(R_cell_kpc[sel_mask], R_pix)
+                print(f"sel_mask = {sel_mask}")
 
                 # select neighbor pixels within s_kpc for each selected cell
                 # (loop over the *selected* cells only)
                 idx_sel = np.flatnonzero(sel_mask)
-                s_kpc_sel = np.maximum(R_cell_kpc[sel_mask], R_pix)
                 flat = y_map.ravel()
                 dl_cm_factor = 3.085677581491367e21  # kpc -> cm
+                print(f"idx_sel = {idx_sel}")
 
-                for jj, s in zip(idx_sel, s_kpc_sel):
+                for jj, s in zip(idx_sel, s_kpc):
                     x0 = xc[jj]
                     y0 = yc[jj]
 
                     # query pixels within s (comoving)
                     idxs = tree.query_ball_point([x0, y0], r=float(s))
+                    if jj % 50000 == 0:
+                        print(f"x0 = {x0}, y0 = {y0}")
+                        print(f"idxs = {idxs}")
                     if not idxs:
                         continue
 
@@ -348,24 +351,28 @@ class LightCone:
 
                     # convert to *proper* radius for LOS thickness
                     s_prop_kpc = s * a
+                    print(f"s_prop_kpc = {s_prop_kpc}")
 
                     mask = r2 <= s_prop_kpc**2
                     if not np.any(mask):
                         continue
 
                     # LOS chord length (proper kpc), then to cm
-                    dl_cm = 2.0 * np.sqrt(s_prop_kpc**2 - r2[mask]) * dl_cm_factor
+                    dl_cm = 2.0 * np.sqrt(s_prop_kpc**2 - r2[mask]) * a * dl_cm_factor
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs, dtype=np.int64)[mask]
                     flat[flat_idxs] += (sigma_T / m_e_c2) * P_cgs[jj] * dl_cm
+                    print(f"flat = {flat}")
 
             # ---------- Transverse mosaics and LOS stacking ----------
             # For each LOS copy k (full boxes): use ALL cells with fresh random transforms
             for k in range(n_full):
                 # random periodic transform per copy (independent for x,y)
-                x_t = _rand_shift_flip_1d(x, Lbox)
-                y_t = _rand_shift_flip_1d(y, Lbox)
+                x_t = _rand_shift_flip_1d(x)
+                y_t = _rand_shift_flip_1d(y)
+                print(f"xmin = {np.min(x)}, ymin = {np.min(y)}")
+                print(f"x_tmin = {np.min(x_t)}, y_tmin = {np.min(y_t)}")
 
                 # Tile in x,y to cover the FOV
                 for ix in range(nx):
@@ -387,8 +394,8 @@ class LightCone:
                     sel = (z >= z0) | (z < (z1 - Lbox))
 
                 if np.any(sel):
-                    x_t = _rand_shift_flip_1d(x, Lbox)
-                    y_t = _rand_shift_flip_1d(y, Lbox)
+                    x_t = _rand_shift_flip_1d(x)
+                    y_t = _rand_shift_flip_1d(y)
                     for ix in range(nx):
                         for iy in range(ny):
                             x_off = ix * Lbox
@@ -396,8 +403,9 @@ class LightCone:
                             accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=sel)
 
             print(f"z={z_mid:.3f}: nx={nx}, ny={ny}, n_full={n_full}, slab={slab_kpc/Lbox:.2f} box")
+            '''
 
-            ''' # loop over gas cells
+             # loop over gas cells
             for i in range(len(pressures)):
                 x0, y0, z0 = positions[i]
                 #x0 = positions[i,0]         # comoving kpc
@@ -447,7 +455,7 @@ class LightCone:
                 # add SZ contribution
                 flat_idxs = np.array(idxs)[mask]
                 y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
-		'''
+                '''
 
         # --- plot the map ---
         self.plot_y_map(y_map, output=output)
