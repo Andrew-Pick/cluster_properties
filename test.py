@@ -227,10 +227,12 @@ class LightCone:
 
         plt.figure(figsize=(6,5))
         im = plt.imshow(
-            np.log10(y_map + 1e-10),  # log stretch, avoid log(0)
+            np.log10(y_map + 1e-7),  # log stretch, avoid log(0)
             extent=extent,
             origin="lower",
-            cmap="viridis"
+            cmap="viridis",
+            vmin=-7,
+            vmax=-4
         )
         cbar = plt.colorbar(im)
         cbar.set_label(r"$\log_{10}(y)$")
@@ -321,105 +323,18 @@ class LightCone:
             # pressures are in keV kpc^-3 (comoving) in your pickles (per your comments);
             # convert to erg cm^-3 (proper). The factor a^3 would enter if converting comoving to proper densities;
             # if your pressures are already *proper* electron pressure, remove the a^3.
-            P_cgs = pressures * 1.6022e-9 / (3.086e21**3)   # erg cm^-3
+            #P_cgs = pressures * 1.6022e-9 / (3.086e21**3)   # erg cm^-3
             # If needed, uncomment to apply proper/comoving conversion:
             #P_cgs = P_cgs * a**3
 
             # Pre-compute cell radius from volume (in kpc^3 comoving), then convert to proper inside loop
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # kpc
 
-            '''# Helper to accumulate contributions for a given transformed (x,y) and selection mask
-            def accumulate_for_copy(xc, yc, sel_mask):
-                # choose effective radius in the screen plane per cell
-                # (max of pixel radius and cell radius), all in comoving kpc
-                s_kpc = np.maximum(R_cell_kpc[sel_mask], R_pix)
-                print(f"sel_mask = {sel_mask}")
-
-                # select neighbor pixels within s_kpc for each selected cell
-                # (loop over the *selected* cells only)
-                idx_sel = np.flatnonzero(sel_mask)
-                flat = y_map.ravel()
-                dl_cm_factor = 3.085677581491367e21  # kpc -> cm
-                print(f"idx_sel = {idx_sel}")
-
-                for jj, s in zip(idx_sel, s_kpc):
-                    x0 = xc[jj]
-                    y0 = yc[jj]
-
-                    # query pixels within s (comoving)
-                    idxs = tree.query_ball_point([x0, y0], r=float(s))
-                    if jj % 50000 == 0:
-                        print(f"x0 = {x0}, y0 = {y0}")
-                        print(f"idxs = {idxs}")
-                    if not idxs:
-                        continue
-
-                    pix_xy = pix_coords[idxs]
-                    r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
-
-                    # convert to *proper* radius for LOS thickness
-                    s_prop_kpc = s * a
-                    print(f"s_prop_kpc = {s_prop_kpc}")
-
-                    mask = r2 <= s_prop_kpc**2
-                    if not np.any(mask):
-                        continue
-
-                    # LOS chord length (proper kpc), then to cm
-                    dl_cm = 2.0 * np.sqrt(s_prop_kpc**2 - r2[mask]) * a * dl_cm_factor
-
-                    # add SZ contribution
-                    flat_idxs = np.array(idxs, dtype=np.int64)[mask]
-                    flat[flat_idxs] += (sigma_T / m_e_c2) * P_cgs[jj] * dl_cm
-                    print(f"flat = {flat}")
-
-            # ---------- Transverse mosaics and LOS stacking ----------
-            # For each LOS copy k (full boxes): use ALL cells with fresh random transforms
-            for k in range(n_full):
-                # random periodic transform per copy (independent for x,y)
-                x_t = _rand_shift_flip_1d(x)
-                y_t = _rand_shift_flip_1d(y)
-                print(f"xmin = {np.min(x)}, ymin = {np.min(y)}")
-                print(f"x_tmin = {np.min(x_t)}, y_tmin = {np.min(y_t)}")
-
-                # Tile in x,y to cover the FOV
-                for ix in range(nx):
-                    for iy in range(ny):
-                        # Global offsets to put this tile at (ix,iy)
-                        x_off = ix * Lbox
-                        y_off = iy * Lbox
-                        accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=np.ones_like(x, dtype=bool))
-
-            # Fractional end-slab: take only a random z-slab of thickness slab_kpc
-            if slab_kpc > 0.0:
-                # choose random slab start in [0, Lbox)
-                z0 = np.random.uniform(0.0, Lbox)
-                z1 = (z0 + slab_kpc)
-                if z1 <= Lbox:
-                    sel = (z >= z0) & (z < z1)
-                else:
-                    # wraps around the periodic boundary
-                    sel = (z >= z0) | (z < (z1 - Lbox))
-
-                if np.any(sel):
-                    x_t = _rand_shift_flip_1d(x)
-                    y_t = _rand_shift_flip_1d(y)
-                    for ix in range(nx):
-                        for iy in range(ny):
-                            x_off = ix * Lbox
-                            y_off = iy * Lbox
-                            accumulate_for_copy(x_t + x_off, y_t + y_off, sel_mask=sel)
-
-            print(f"z={z_mid:.3f}: nx={nx}, ny={ny}, n_full={n_full}, slab={slab_kpc/Lbox:.2f} box")
-            '''
 
             def add_to_y_map(P, pos, R):
                 # loop over gas cells
                 for i in range(len(pos)):
                     x0, y0, z0 = pos[i]
-                    #x0 = positions[i,0]         # comoving kpc
-                    #y0 = positions[i,1]
-                    #z0 = positions[i,2]
                     R_cell = R[i]  # kpc
                     P_cell = P[i]               # not in proper units yet
                     if R_cell < R_pix:
@@ -459,10 +374,11 @@ class LightCone:
                         print(f"r2[mask] = {r2[mask]}")
 
                     # line-of-sight path length through spherical cell
-                    dl = 2.0 * np.sqrt(s_proper**2 - r2[mask]) * a * dl_cm_factor  # kpc
+                    r2_proper = r2 * a**2
+                    dl = 2.0 * np.sqrt(s_proper**2 - r2[mask]) * dl_cm_factor  # kpc
 
                     # Convert units keV kpc^-3 to erg cm^-3
-                    P_cell = P_cell * 1.6022e-9 / (3.086e21**3)
+                    P_cell = P_cell * 1.6022e-9 / (3.086e21**3) * a**3
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
