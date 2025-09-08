@@ -307,7 +307,7 @@ class LightCone:
             pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
             tree = cKDTree(pix_coords)
 
-            R_pix = self.pix_rad * D_M  # proper kpc?
+            R_pix = self.pix_rad * D_M  # comoving kpc
 #            print(f"R_pix = {R_pix}")
 
             # Shell comoving thickness in *kpc* (comoving)
@@ -320,33 +320,28 @@ class LightCone:
             frac   = (dchi / Lbox) - n_full
             partial_thickness = max(0.0, min(frac * Lbox, Lbox))
 
-            # Pre-compute per-cell (proper) pressure conversion ONCE
-            # pressures are in keV kpc^-3 (comoving) in your pickles (per your comments);
-            # convert to erg cm^-3 (proper). The factor a^3 would enter if converting comoving to proper densities;
-            # if your pressures are already *proper* electron pressure, remove the a^3.
-            #P_cgs = pressures * 1.6022e-9 / (3.086e21**3)   # erg cm^-3
-            # If needed, uncomment to apply proper/comoving conversion:
-            #P_cgs = P_cgs * a**3
-
-            # Pre-compute cell radius from volume (in kpc^3 comoving), then convert to proper inside loop
-            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # kpc
+            # Pre-compute cell radius from volume (in kpc^3 proper)
+            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
 
             def add_to_y_map(P, pos, R):
                 # loop over gas cells
                 for i in range(len(pos)):
-                    x0, y0, z0 = pos[i]
-                    R_cell = R[i]  # kpc
-                    P_cell = P[i]               # not in proper units yet
+                    x0, y0, z0 = pos[i] / a  # comoving kpc
+                    R_cell = R[i] / a  # comoving kpc
+                    P_cell = P[i]               # proper
                     if R_cell < R_pix:
-                        s = R_pix
+                        s = R_pix  # comoving
                     else:
                         s = R_cell
+
+#                    s = R_cell  # no smoothing
+
                     if i % 50000 == 0:
                         print("Processing...")
 
                     # proper radius and path length conversion
-                    s_proper = s * a              # proper kpc
+#                    s_proper = s * a              # proper kpc
                     dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
                     # find all pixel centers within radius R
@@ -355,10 +350,10 @@ class LightCone:
                         continue
 
                     # mask pixels within the projected radius
-                    pix_xy = pix_coords[idxs]
+                    pix_xy = pix_coords[idxs]  # comoving kpc
                     r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
 #                    r2 = (x_pix - x0)**2 + (y_pix - y0)**2
-                    mask = r2 <= s_proper**2
+                    mask = r2 <= s**2
                     #print(f"r2[mask] = {r2[mask]}")
                     if i % 50000 == 0:
                         print(f"z_mid = {z_mid}")
@@ -375,25 +370,24 @@ class LightCone:
                         print(f"r2[mask] = {r2[mask]}")
 
                     # line-of-sight path length through spherical cell
-                    r2_proper = r2 * a**2
-                    dl = 2.0 * np.sqrt(s_proper**2 - r2_proper[mask]) * dl_cm_factor  # kpc
+                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * dl_cm_factor * a  # proper kpc
 
                     # Convert units keV kpc^-3 to erg cm^-3
                     P_cell = P_cell * 1.6022e-9 / (3.086e21**3) # * a**3  # given in proper units
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
-                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl
-                
+                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl  # proper
+
             # full boxes
             for _ in range(n_full):
-                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc)
+                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
                 print(f"min pos = {np.min(pos)}")
                 add_to_y_map(pressures, pos, R_cell_kpc)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
-                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc)
+                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
                 zpos = pos[:, 2]
 
                 # pick a random starting slice and wrap if needed
