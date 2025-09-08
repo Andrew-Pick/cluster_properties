@@ -223,16 +223,16 @@ class LightCone:
     def plot_y_map(self, y_map, output=None):
         npix = y_map.shape[0]
         fov_arcmin = self.fov_deg * 60.0
-        extent = [-fov_arcmin/2, fov_arcmin/2, -fov_arcmin/2, fov_arcmin/2]  # arcmin
+        extent = [0, fov_arcmin, 0, fov_arcmin]  # arcmin
 
         plt.figure(figsize=(6,5))
         im = plt.imshow(
             np.log10(y_map + 1e-7),  # log stretch, avoid log(0)
             extent=extent,
             origin="lower",
-            cmap="viridis",
-            vmin=-7,
-            vmax=-4
+            cmap="viridis"
+#            vmin=-7,
+#            vmax=-4
         )
         cbar = plt.colorbar(im)
         cbar.set_label(r"$\log_{10}(y)$")
@@ -285,7 +285,8 @@ class LightCone:
             a = 1.0 / (1.0 + z_mid)
 
             # transverse comoving distance
-            D_M = (1.0 + z_mid) * angular_diameter_distance(z_mid) * 1000  # kpc
+            D_A = angular_diameter_distance(z_mid) * 1000  # kpc
+            D_M = (1.0 + z_mid) * D_A  # kpc
 
             # FOV in comoving kpc at shell
             Lmap_com_kpc = D_M * self.fov_rad
@@ -306,7 +307,7 @@ class LightCone:
             pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
             tree = cKDTree(pix_coords)
 
-            R_pix = self.pix_rad * D_M  # kpc
+            R_pix = self.pix_rad * D_M  # proper kpc?
 #            print(f"R_pix = {R_pix}")
 
             # Shell comoving thickness in *kpc* (comoving)
@@ -375,10 +376,10 @@ class LightCone:
 
                     # line-of-sight path length through spherical cell
                     r2_proper = r2 * a**2
-                    dl = 2.0 * np.sqrt(s_proper**2 - r2[mask]) * dl_cm_factor  # kpc
+                    dl = 2.0 * np.sqrt(s_proper**2 - r2_proper[mask]) * dl_cm_factor  # kpc
 
                     # Convert units keV kpc^-3 to erg cm^-3
-                    P_cell = P_cell * 1.6022e-9 / (3.086e21**3) * a**3
+                    P_cell = P_cell * 1.6022e-9 / (3.086e21**3) # * a**3  # given in proper units
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
