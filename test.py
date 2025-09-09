@@ -370,14 +370,17 @@ class LightCone:
 #                        print(f"r2[mask] = {r2[mask]}")
 
                     # line-of-sight path length through spherical cell
-#                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * dl_cm_factor * a  # proper kpc
+                    L = 2.0 * np.sqrt(s**2 - r2[mask]) * a  # proper kpc
 
                     # Convert units keV kpc^-3 to erg cm^-3
                     P_cell = P_cell * 1.6022e-9 / (3.086e21**2)  # given in proper units
 
+                    # Calculate normalised smoothing kernel w
+                    w = L/np.sum(L)
+
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
-                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell #* dl  # proper
+                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * w  # proper
 
 #                    print(f"ymap = {y_map.ravel()[flat_idxs]}")
 
