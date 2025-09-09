@@ -337,7 +337,7 @@ class LightCone:
                     # use s^2 instead of the volume from data - removes need for dl in sum
                     P_cell = P[i] * vol[i] / (s * a)**2  # proper keV kpc^-2
 
-                    if i % 50000 == 0:
+                    if i % 100000 == 0:
                         print("Processing...")
 
                     # proper radius and path length conversion
@@ -355,7 +355,7 @@ class LightCone:
 #                    r2 = (x_pix - x0)**2 + (y_pix - y0)**2
                     mask = r2 <= s**2
                     #print(f"r2[mask] = {r2[mask]}")
-                    if i % 50000 == 0:
+                    if i % 100000 == 0:
                         print(f"z_mid = {z_mid}")
                         print(f"i = {i}")
                         #print(f"x0 = {x0}")
@@ -364,10 +364,10 @@ class LightCone:
                     if not np.any(mask):
                         continue
 
-                    if i % 50000 == 0:
-                        print(f"R_cell = {R_cell}")
-                        print(f"s = {s}")
-                        print(f"r2[mask] = {r2[mask]}")
+#                    if i % 100000 == 0:
+#                        print(f"R_cell = {R_cell}")
+#                        print(f"s = {s}")
+#                        print(f"r2[mask] = {r2[mask]}")
 
                     # line-of-sight path length through spherical cell
 #                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * dl_cm_factor * a  # proper kpc
@@ -383,13 +383,13 @@ class LightCone:
 
             # full boxes
             for _ in range(n_full):
-                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
+                pos = _rand_shift_flip_3d(positions, Lbox * a)
                 print(f"min pos = {np.min(pos)}")
                 add_to_y_map(pressures, pos, R_cell_kpc, volumes)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
-                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
+                pos = _rand_shift_flip_3d(positions, Lbox * a)
                 zpos = pos[:, 2]
 
                 # pick a random starting slice and wrap if needed
