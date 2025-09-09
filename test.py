@@ -230,7 +230,7 @@ class LightCone:
             np.log10(y_map + 1e-7),  # log stretch, avoid log(0)
             extent=extent,
             origin="lower",
-            cmap="viridis"
+            cmap="viridis",
 #            vmin=-7,
 #            vmax=-4
         )
@@ -324,25 +324,25 @@ class LightCone:
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
 
-            def add_to_y_map(P, pos, R):
+            def add_to_y_map(P, pos, R, vol):
                 # loop over gas cells
                 for i in range(len(pos)):
                     x0, y0, z0 = pos[i] / a  # comoving kpc
                     R_cell = R[i] / a  # comoving kpc
-                    P_cell = P[i]               # proper
                     if R_cell < R_pix:
                         s = R_pix  # comoving
                     else:
                         s = R_cell
 
-#                    s = R_cell  # no smoothing
+                    # use s^2 instead of the volume from data - removes need for dl in sum
+                    P_cell = P[i] * vol[i] / (s * a)**2  # proper keV kpc^-2
 
                     if i % 50000 == 0:
                         print("Processing...")
 
                     # proper radius and path length conversion
 #                    s_proper = s * a              # proper kpc
-                    dl_cm_factor = 3.085677581491367e21  # kpc -> cm
+#                    dl_cm_factor = 3.085677581491367e21  # kpc -> cm
 
                     # find all pixel centers within radius R
                     idxs = tree.query_ball_point([x0, y0], r=s)
@@ -370,20 +370,22 @@ class LightCone:
                         print(f"r2[mask] = {r2[mask]}")
 
                     # line-of-sight path length through spherical cell
-                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * dl_cm_factor * a  # proper kpc
+#                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * dl_cm_factor * a  # proper kpc
 
                     # Convert units keV kpc^-3 to erg cm^-3
-                    P_cell = P_cell * 1.6022e-9 / (3.086e21**3) # * a**3  # given in proper units
+                    P_cell = P_cell * 1.6022e-9 / (3.086e21**2)  # given in proper units
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
-                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * dl  # proper
+                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell #* dl  # proper
+
+#                    print(f"ymap = {y_map.ravel()[flat_idxs]}")
 
             # full boxes
             for _ in range(n_full):
                 pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
                 print(f"min pos = {np.min(pos)}")
-                add_to_y_map(pressures, pos, R_cell_kpc)
+                add_to_y_map(pressures, pos, R_cell_kpc, volumes)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
@@ -391,14 +393,15 @@ class LightCone:
                 zpos = pos[:, 2]
 
                 # pick a random starting slice and wrap if needed
-                z0 = np.random.uniform(0, Lbox)
+                z0 = np.random.uniform(0, Lbox * a)
                 zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
                        if z0 + partial_thickness <= Lbox else \
                        ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
                 pos_partial = pos[zsel]
                 P_partial   = pressures[zsel]
                 R_partial   = R_cell_kpc[zsel]
-                add_to_y_map(P_partial, pos_partial, R_partial)
+                V_partial   = volumes[zsel]
+                add_to_y_map(P_partial, pos_partial, R_partial, V_partial)
 
         # --- plot the map ---
         self.plot_y_map(y_map, output=output)
