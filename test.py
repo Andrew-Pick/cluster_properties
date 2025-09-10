@@ -6,6 +6,7 @@ import pickle
 from scipy.ndimage import zoom
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
+from skimage.feature import peak_local_max
 
 #np.random.seed(1273)
 
@@ -67,10 +68,10 @@ def find_snapshot_near(target_z, snap_numbers=None):
     idx = np.argmin(np.abs(found_zs - target_z))
     return found_snaps[idx], found_zs[idx]
 
-def _rand_shift_flip_3d(pos, L):
+def _rand_shift_flip_3d(pos, L, Ltot):
     """
     Apply a single random periodic shift and an optional flip around L/2.
-    Vectorized for speed. Returns transformed coord in [0, L).
+    Returns transformed coord in [0, L).
     """
     pos = np.array(pos, copy=True)
 
@@ -83,7 +84,7 @@ def _rand_shift_flip_3d(pos, L):
         pos[:,1] = (L - pos[:,1])
     if np.random.rand() < 0.5:
         pos[:,2] = (L - pos[:,2])
-    pos = (pos + s) % L
+    pos = (pos + s) % Ltot
     return pos
 
 
@@ -251,7 +252,7 @@ class LightCone:
             plt.show()
 
 
-    def calc_y(self, output=None):
+    def calc_y(self):
         """
         Compute the SZ y-map using gas-cell contributions with spherical kernel.
     
@@ -270,6 +271,9 @@ class LightCone:
 
         # --- initialize y map ---
         y_map = np.zeros((self.npix, self.npix), dtype=np.float64)
+
+        D_map = np.zeros((self.npix, self.npix), dtype=np.float64)  # integrate dl for each pixel, to compare with total distance to z=3
+        D0 = comoving_distance(3) * 1000 * 1/(1+3)
 
         for z_lo, z_hi, z_mid in zip(self.z_edges[:-1], self.z_edges[1:], self.z_mids):
 
@@ -370,29 +374,36 @@ class LightCone:
 #                        print(f"r2[mask] = {r2[mask]}")
 
                     # line-of-sight path length through spherical cell
-                    L = 2.0 * np.sqrt(s**2 - r2[mask]) * a  # proper kpc
+                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a  # proper kpc
+
+                    # Calculate normalised smoothing kernel w
+                    w = dl/np.sum(dl)
 
                     # Convert units keV kpc^-3 to erg cm^-3
                     P_cell = P_cell * 1.6022e-9 / (3.086e21**2)  # given in proper units
 
-                    # Calculate normalised smoothing kernel w
-                    w = L/np.sum(L)
-
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
-                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * w  # proper
+                    y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell #* w  # proper
 
+                    D_map.ravel()[flat_idxs] += dl
 #                    print(f"ymap = {y_map.ravel()[flat_idxs]}")
 
             # full boxes
+            pos = positions
+            print(f'Max position = {np.max(pos)}')
+            print(f'Min position = {np.min(pos)}')
+            print(f'Lmap_prop_kpc = {Lmap_com_kpc * a}')
+            print(f'proper Lbox = {Lbox * a}')
             for _ in range(n_full):
-                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
-                print(f"min pos = {np.min(pos)}")
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lmap_com_kpc * a)
+                print(f'Max position = {np.max(pos)}')
+                print(f'Min position = {np.min(pos)}')
                 add_to_y_map(pressures, pos, R_cell_kpc, volumes)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
-                pos = _rand_shift_flip_3d(positions, Lmap_com_kpc * a)
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lmap_com_kpc * a)
                 zpos = pos[:, 2]
 
                 # pick a random starting slice and wrap if needed
@@ -406,6 +417,30 @@ class LightCone:
                 V_partial   = volumes[zsel]
                 add_to_y_map(P_partial, pos_partial, R_partial, V_partial)
 
-        # --- plot the map ---
-        self.plot_y_map(y_map, output=output)
+        dl = D_map * D_map/D0
+        w = dl/np.sum(dl)
+        y_map = y_map * w
 
+        print(f'D_map <= {np.max(D_map)}')
+        return y_map
+
+    def signal_noise_ratio(self, y):
+        mean = np.mean(y)
+        N = len(y)
+        rms = np.sqrt(1/N * np.sum((y - mean)**2))
+        print(f'rms = {rms}')
+        snr = y / rms
+        return snr
+
+    def find_peaks(self, y, thresh):
+        coords = peak_local_max(
+            y,
+            min_distance=10,    # minimum separation in pixels
+            threshold_abs=thresh, # minimum value for detection
+            num_peaks=5000        # max number of peaks to return
+        )
+
+        # Extract values at those coordinates
+        peak_vals = y[coords[:, 0], coords[:, 1]]
+        print(f'peaks = {peak_vals}')
+        return coords, peak_vals
