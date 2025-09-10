@@ -882,8 +882,8 @@ class Scaling_Relation:
         self.legsize = "small"
         self.ms = 5.
         self.lw = 1.
-        fig = plt.figure(figsize=(4.2, 6)) 
-        gs = gridspec.GridSpec(2, 1, height_ratios=[4, 1], hspace=0)  
+        fig = plt.figure(figsize=(4.2, 6))
+        gs = gridspec.GridSpec(2, 1, height_ratios=[4, 1], hspace=0)
 
         ax_main = plt.subplot(gs[0])
         ax_sub = plt.subplot(gs[1], sharex=ax_main)
@@ -948,6 +948,9 @@ class Scaling_Relation:
         
         self.median_prop_gr = None
         self.mean_log_mass_gr = None
+
+        logmasses, logprops1, mean_log_masses, median_props1, median_props_rescaled1 = [], [], [], [], []
+
         for (mid,m) in enumerate(self.models):
             ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
             ldmass = ld.M500
@@ -1029,13 +1032,19 @@ class Scaling_Relation:
                 self.median_prop_gr1 = median_prop_no_log1
                 self.mean_log_mass_gr = mean_log_mass
                 ax.scatter(logmass, logprop1, marker='o', s=0.8, color="darkgrey",alpha=0.8, label='GR')
-                ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR')  
+                ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR')
+                logmasses.append(logmass)
+                logprops1.append(logprop1)
+                mean_log_masses.append(mean_log_mass)
+                median_props1.append(median_prop1)
             else:
 #                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
 #                ax.plot(mean_log_mass[size >= 5], median_prop_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5)
                 ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label = m)
                 ax.plot(mean_log_mass[size >= 2], median_prop_rescaled1[size >= 2], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m + ' rescaled') 
-             
+                mean_log_masses.append(mean_log_mass)
+                median_props1.append(median_prop1)
+                median_props_rescaled1.append(median_prop_rescaled1)
     
         ax.set_xlim([13, 15.4])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
@@ -1079,7 +1088,8 @@ class Scaling_Relation:
 
         ax.text(title_x,title_y,rf'$\mathit{{z}} = {self.rshift:.1f}$',fontsize=self.mysize,ha='left', va='top')
  #       plt.tight_layout()
-    
+
+        #return logmasses, logprops1, mean_log_masses, median_props1, median_props_rescaled1
     
     def z0_subplot(self, ax):
         if self.median_prop_gr is None or self.size_gr is None:
