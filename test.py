@@ -282,6 +282,9 @@ class LightCone:
 
     def cluster_positions(self):
 
+        cluster_positions = np.array([])
+        cluster_masses = np.array([])
+
         for z_lo, z_hi, z_mid in zip(self.z_edges[:-1], self.z_edges[1:], self.z_mids):
 
             snap, snap_z = find_snapshot_near(z_mid)
@@ -328,6 +331,38 @@ class LightCone:
 
             s = np.maximum(R_cell_kpc / a, R_pix)
 
+            # full boxes
+            np.random.seed(1273)
+            pos = positions #[0:10000000,:]
+            print(f'Max position = {np.max(pos)}')
+            print(f'Min position = {np.min(pos)}')
+            print(f'Lmap_prop_kpc = {Lmap_com_kpc * a}')
+            print(f'proper Lbox = {Lbox * a}')
+#            partial_thickness = 0
+#            n_full = 1
+            for _ in range(n_full):
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
+                print(f'Max position = {np.max(pos)}')
+                print(f'Min position = {np.min(pos)}')
+                cluster_positions = np.concatenate((cluster_positions, pos), axis=0)
+                cluster_masses = np.concatenate((cluster_masses, M500), axis=0)
+
+            # partial box (take n_frac_slices)
+            if partial_thickness > 0:
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
+                zpos = pos[:, 2]
+
+                # pick a random starting slice and wrap if needed
+                z0 = np.random.uniform(0, Lbox * a)
+                zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
+                       if z0 + partial_thickness <= Lbox else \
+                       ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
+                pos_partial = pos[zsel]
+                mass_partial = M500[zsel]
+                cluster_positions = np.concatenate((cluster_positions, pos_partial), axis=0)
+                cluster_masses = np.concatenate((cluster_masses, mass_partial), axis=0)
+
+        return cluster_positions, cluster_masses
 
     def calc_y(self, save_y_map="/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/L302_N1136/GR/pickle_files/y_map.pkl"):
         """
