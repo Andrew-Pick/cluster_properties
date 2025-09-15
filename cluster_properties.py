@@ -250,6 +250,237 @@ class ClusterProperties:
             self.gp = group_particles.GroupParticles(self.s, group_part_file, self.snapshot, ptypes=self.fp_ptypes, parttypes=self.fp_parttypes, mass_cut=self.mass_cut, delta=self.delta)
 
 
+    def cluster_SZ(self, group_id = -1):
+        if self.model == "GR" or self.simulation == "L302_N1136":
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
+            print(pressure_dumpfile)
+        else:
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
+
+        # define logarithmic radial bins, units kpc
+        self.nbins = 28
+        min_rad = 14.9
+        max_rad = 1000
+        self.bins = np.logspace(np.log10(min_rad), np.log10(max_rad), self.nbins + 1, base = 10.0)
+        self.bin_radii = 0.5 * (self.bins[1:] + self.bins[:-1])   
+        # midpoint of each bin, kpc units
+
+        # define group sample
+        if group_id != -1:
+            self.sample = [group_id]
+        else:
+            if self.delta == 200:
+                self.sample = np.where(self.s.cat['Group_M_Crit200'] * self.s.header.hubble > self.mass_cut)[0]
+            elif self.delta == 500:
+                self.sample = np.where(self.s.cat['Group_M_Crit500'] * self.s.header.hubble > self.mass_cut)[0]
+            elif self.delta == "all":
+                self.sample = np.where(self.s.cat['Group_M_Crit500'] * self.s.header.hubble > -inf)[0]
+        # NB:// mass_cut units are Msun/h
+
+        print("Median M500 [Msun/h]: %.2f" % (np.log10(np.median(self.group_m500[self.sample] * self.s.header.hubble))))
+        print("Min / Max mass: %.2f / %.2f" % (np.log10(min(self.group_m500[self.sample] * self.s.header.hubble)), np.log10(max(self.group_m500[self.sample] * self.s.header.hubble))))
+        print("Sample size: ", len(self.sample))
+
+        if not os.path.exists(group_dumpfile):
+            print("Dumpfile %s does not exist" % (group_dumpfile))
+
+            # initialise property arrays
+            self.vol_temp_profile = np.zeros((len(self.sample),self.nbins))
+            self.mass_temp_profile = np.zeros((len(self.sample),self.nbins))
+            self.density_profile = np.zeros((len(self.sample),self.nbins))
+            self.electron_pressure_profile = np.zeros((len(self.sample),self.nbins))
+            self.cum_fgas = np.zeros((len(self.sample),self.nbins+1))
+            self.vol_T500 = np.zeros(len(self.sample))
+            self.mass_T500 = np.zeros(len(self.sample))
+            self.vol_T500_with_core = np.zeros(len(self.sample))
+            self.mass_T500_with_core = np.zeros(len(self.sample))
+            self.Mg500 = np.zeros(len(self.sample))
+            self.Mstar = np.zeros(len(self.sample))
+            self.A19_Mstar = np.zeros(len(self.sample))
+            self.SMF =  np.zeros(len(self.sample))
+            self.Ysz_with_core = np.zeros(len(self.sample))
+            self.Ysz_no_core = np.zeros(len(self.sample))
+            self.Lx_with_core = np.zeros(len(self.sample))
+            self.Lx_no_core = np.zeros(len(self.sample))
+
+            print("Processing group properties ...")
+            cell_counter = 0
+            sfr_counter = 0
+            for (index, group) in enumerate(self.sample):
+                if index % 100 == 0:
+                    print("Iteration %s/%s" % (index, len(self.sample)))
+               
+                gas_radii = np.zeros(len(self.gp.group_particles['gas'][group]))
+                temp = np.zeros(len(self.gp.group_particles['gas'][group]))
+                electron_number = np.zeros(len(self.gp.group_particles['gas'][group]))
+                electron_pressure = np.zeros(len(self.gp.group_particles['gas'][group]))
+
+                # iterate through gas particles within r<R200 in each group
+                for (pid, particle) in enumerate(self.gp.group_particles['gas'][group]):
+                    cell_counter += 1
+                    ### For referee ###
+                    if self.gas_sfr[particle] > 0.:
+                        sfr_counter += 1
+#                        continue   # Skip particle if SFR > 0 (i.e., temp will remain zero)
+                    ### End ###
+
+                    gas_radii[pid] = np.sqrt(np.sum((self.gas_positions[particle] - self.group_pos[group])**2))
+                    temp[pid] = gas_temperature(self.internal_energy[particle], self.electron_abundance[particle])   # units keV
+                    electron_number[pid] = self.electron_abundance[particle] * (XH * self.gas_masses[particle] / (mp / Msun))
+                    # right-hand bracket gives number of hydrogen atoms
+                    electron_pressure[pid] = temp[pid] * electron_number[pid] / (self.gas_masses[particle] / self.gas_densities[particle])   # units keV kpc^-3
+
+                gas_mass = self.gas_masses[self.gp.group_particles['gas'][group]]
+                gas_density = self.gas_densities[self.gp.group_particles['gas'][group]]
+
+                dm_radii = np.zeros(len(self.gp.group_particles['dm'][group]))
+                for (pid, particle) in enumerate(self.gp.group_particles['dm'][group]):
+                    dm_radii[pid] = np.sqrt(np.sum((self.dm_positions[particle] - self.group_pos[group])**2))
+
+                dm_mass = self.dm_masses[self.gp.group_particles['dm'][group]]
+
+                # reorder gas data by radius
+                order_gas_indices = np.argsort(gas_radii)
+                ordered_gas_radii = gas_radii[order_gas_indices]
+                ordered_gas_temp = temp[order_gas_indices]
+                ordered_gas_mass = gas_mass[order_gas_indices]    
+                ordered_gas_density = gas_density[order_gas_indices]
+                ordered_electron_number = electron_number[order_gas_indices]
+                ordered_electron_pressure = electron_pressure[order_gas_indices]
+
+                # reorder DM data by radius
+                order_dm_indices = np.argsort(dm_radii)
+                ordered_dm_radii = dm_radii[order_dm_indices]
+                ordered_dm_mass = dm_mass[order_dm_indices]
+
+                # gas and DM counts in each radius bin
+                npart = np.histogram(ordered_gas_radii, self.bins)[0]
+                dm_npart = np.histogram(ordered_dm_radii, self.bins)[0]
+                
+                # initialise counts and masses using particles within min radius
+                count = len(ordered_gas_mass[ordered_gas_radii < self.bins[0]])
+                dm_count = len(ordered_dm_mass[ordered_dm_radii < self.bins[0]])
+                cum_mgas = np.sum(ordered_gas_mass[ordered_gas_radii < self.bins[0]])
+                cum_mdm = np.sum(ordered_dm_mass[ordered_dm_radii < self.bins[0]])
+                self.cum_fgas[index][0] = cum_mgas / (cum_mgas + cum_mdm)
+
+                # iterate over radial bins
+                for i in range(self.nbins):
+                    # volume-weighted temperature of each bin
+                    self.vol_temp_profile[index][i] = np.sum(ordered_gas_temp[count : count + npart[i]] * (ordered_gas_mass[count : count + npart[i]] / ordered_gas_density[count : count + npart[i]])) / np.sum(ordered_gas_mass[count : count + npart[i]] / ordered_gas_density[count : count + npart[i]])
+
+                    # mass-weighted temperature of each bin
+                    self.mass_temp_profile[index][i] = np.sum(ordered_gas_temp[count : count + npart[i]] * ordered_gas_mass[count : count + npart[i]]) / np.sum(ordered_gas_mass[count : count + npart[i]])
+
+                    # average density of each bin
+                    self.density_profile[index][i] = np.sum(ordered_gas_mass[count : count + npart[i]]) / ((4/3) * np.pi * (self.bins[i+1]**3 - self.bins[i]**3) / 1000**3)
+                    # density units Msun / Mpc^3
+
+                    # volume-weighted electron pressure of each bin
+                    self.electron_pressure_profile[index][i] = np.sum(ordered_electron_pressure[count : count + npart[i]] * (ordered_gas_mass[count : count + npart[i]] / ordered_gas_density[count : count + npart[i]])) / np.sum(ordered_gas_mass[count : count + npart[i]] / ordered_gas_density[count : count + npart[i]])
+
+                    cum_mgas += np.sum(ordered_gas_mass[count : count + npart[i]])
+                    cum_mdm += np.sum(ordered_dm_mass[dm_count : dm_count + dm_npart[i]])
+                    # total gas and DM masses enclosed by bin edge i+1
+                    self.cum_fgas[index][i+1] = cum_mgas / (cum_mgas + cum_mdm)
+                    count += npart[i]
+                    dm_count += dm_npart[i]
+
+
+                # gas cell indices between core_frac * R500 and R500
+                R500_no_core_gas_sample = np.where((self.core_frac * self.group_r500[group] <= ordered_gas_radii) & (ordered_gas_radii <= self.group_r500[group]))
+
+                # volume-weighted temperature
+                self.vol_T500[index] = np.sum(ordered_gas_temp[R500_no_core_gas_sample] * (ordered_gas_mass[R500_no_core_gas_sample] / ordered_gas_density[R500_no_core_gas_sample])) / np.sum(ordered_gas_mass[R500_no_core_gas_sample] / ordered_gas_density[R500_no_core_gas_sample])
+
+                # mass-weighted temperature
+                self.mass_T500[index] = np.sum(ordered_gas_temp[R500_no_core_gas_sample] * ordered_gas_mass[R500_no_core_gas_sample]) / np.sum(ordered_gas_mass[R500_no_core_gas_sample])
+
+                # Ysz parameter
+                self.Ysz_no_core[index] = ((sigma_t/(kpc_to_m*1000)**2)/(me*c**2/(eV_to_joules*1000)))*np.sum(ordered_electron_number[R500_no_core_gas_sample]*ordered_gas_temp[R500_no_core_gas_sample])   # units Mpc^2
+                # mass-weighted temperature (keV) of gas enclosed within 0.15-1.R500
+
+                # Lx
+                self.Lx_no_core[index] = np.sum(ordered_gas_mass[R500_no_core_gas_sample] * (ordered_gas_density[R500_no_core_gas_sample] * 1000**3) * (ordered_gas_temp[R500_no_core_gas_sample]**0.5))   # units keV^1/2 Msun^2 Mpc^-3
+               
+ 
+                # all gas cell indices within R500 (inc. core)
+                R500_gas_sample = np.where(ordered_gas_radii<=self.group_r500[group])
+
+                # total gas mass (Msun) enclosed within R500
+                self.Mg500[index] = np.sum(ordered_gas_mass[R500_gas_sample])
+
+                # volume-weighted temperature (inc. core)
+                self.vol_T500_with_core[index] = np.sum(ordered_gas_temp[R500_gas_sample] * (ordered_gas_mass[R500_gas_sample] / ordered_gas_density[R500_gas_sample])) / np.sum(ordered_gas_mass[R500_gas_sample] / ordered_gas_density[R500_gas_sample])
+
+                # mass-weighted temperature (inc. core)
+                self.mass_T500_with_core[index] = np.sum(ordered_gas_temp[R500_gas_sample] * ordered_gas_mass[R500_gas_sample]) / np.sum(ordered_gas_mass[R500_gas_sample])
+
+                # Ysz parameter (inc. core)
+                self.Ysz_with_core[index] = ((sigma_t/(kpc_to_m*1000)**2)/(me*c**2/(eV_to_joules*1000)))*np.sum(ordered_electron_number[R500_gas_sample] * ordered_gas_temp[R500_gas_sample])   # units Mpc^2
+
+                # Lx
+                self.Lx_with_core[index] = np.sum(ordered_gas_mass[R500_gas_sample] * (ordered_gas_density[R500_gas_sample] * 1000**3) * (ordered_gas_temp[R500_gas_sample]**0.5))   # units keV^1/2 Msun^2 Mpc^-3
+
+                # if full-ph simulation, find stellar and BH properties
+                if not self.non_rad:
+                    # find radii of stellar particles
+                    star_radii = np.zeros(len(self.gp.group_particles['stars'][group]))
+                    for (pid,particle) in enumerate(self.gp.group_particles['stars'][group]):
+                        star_radii[pid] = np.sqrt(np.sum((self.star_positions[particle]-self.group_pos[group])**2))   # kpc
+
+                    star_mass = self.star_masses[self.gp.group_particles['stars'][group]]
+
+#                    if 'bh' in fp_ptypes:
+                        # find radii of BH particles
+#                        bh_radii = np.zeros(len(self.gp.group_particles['bh'][group]))
+#                        for (pid,particle) in enumerate(self.gp.group_particles['bh'][group]):
+#                            bh_radii[pid] = np.sqrt(np.sum((self.bh_positions[particle]-self.group_pos[group])**2))   # kpc
+#                        bh_mass = self.bh_masses[self.gp.group_particles['bh'][group]]
+#                        order_bh_indices = np.argsort(bh_radii)
+#                        ordered_bh_radii = bh_radii[order_bh_indices]
+#                        ordered_bh_mass = bh_mass[order_bh_indices]
+
+                    # order star particles by radius
+                    order_star_indices = np.argsort(star_radii)
+                    ordered_star_radii = star_radii[order_star_indices]
+                    ordered_star_mass = star_mass[order_star_indices]
+
+                    # use star particles within R500
+                    R500_star_sample = np.where(ordered_star_radii<=self.group_r500[group])
+                    self.Mstar[index] = np.sum(ordered_star_mass[R500_star_sample])
+
+                    # use star particles within 30kpc
+                    A19_30kpc_star_sample = np.where(ordered_star_radii<30)
+                    A19_stellar_mass = np.sum(ordered_star_mass[A19_30kpc_star_sample])
+
+                    # stellar mass [< 30 kpc] / total mass [M200c]
+                    self.SMF[index] = A19_stellar_mass / self.group_m200[group]
+                    self.A19_Mstar[index] = A19_stellar_mass   # stellar mass within 30kpc
+
+            print("Star-forming cells: ", sfr_counter)
+            print("Total cells: ", len(self.gas_sfr))
+            print("Total group cells: ", cell_counter)
+
+#           df = open(group_dumpfile,"w+")
+            df = open(group_dumpfile,"wb+")
+            if self.non_rad:
+                pickle.dump((self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]), df)
+            else:
+                pickle.dump((self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]), df)
+            df.close()
+
+        else:
+            print("%s exists!" % (group_dumpfile))
+#           df = open(group_dumpfile, 'r')
+            df = open(group_dumpfile, 'rb')
+            if self.non_rad:
+                (self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]) = pickle.load(df)
+            else:
+                (self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]) = pickle.load(df)
+            df.close()
+
+
     def calc_electron_pressure(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
             pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_pressure.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)

@@ -1031,7 +1031,7 @@ class Scaling_Relation:
 #                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, color=self.colors[mid],label = 'GR with core')  
                 self.median_prop_gr1 = median_prop_no_log1
                 self.mean_log_mass_gr = mean_log_mass
-                ax.scatter(logmass, logprop1, marker='o', s=0.8, color="darkgrey",alpha=0.8, label='GR')
+                ax.scatter(logmass, logprop1, marker='o', s=0.8, color="darkgrey",alpha=0.8)
                 ax.plot(mean_log_mass[size >= 2], median_prop1[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR')
                 logmasses.append(logmass)
                 logprops1.append(logprop1)
@@ -1051,22 +1051,27 @@ class Scaling_Relation:
         ax.set_yticklabels(r'')
         ax.set_xticklabels(r'')
         ax.set_xticks(np.arange(13,15.4,0.5))
+
         if self.property == "T":
             ax.set_ylim([-0.75, 1.25])
             ax.set_yticks(np.arange(-0.75,1.25,0.25))
             ax.set_yticklabels([r'',r'$-0.5$',r'',r'$0.0$',r'',r'$0.5$',r'',r'$1.0$'],fontsize=self.axsize)
+            ax.set_ylabel(r'$\log_{10}(\overline{T}_{\textnormal{gas}} \, [\textnormal{keV}])$', fontsize=self.mysize, labelpad=10)
         if self.property == "SZ":
             ax.set_ylim([-8, -3])
             ax.set_yticks(np.arange(-8,-2,1))
             ax.set_yticklabels([r'',r'$-7$',r'$-6$',r'$-5$',r'$-4$',r'$-3$'],fontsize=self.axsize)
+            ax.set_ylabel(r'$\log_{10}(Y_{SZ} \, [Mpc^2])$', fontsize=self.mysize, labelpad=10)
         if self.property == "Yx":
             ax.set_ylim([11, 16])
             ax.set_yticks(np.arange(11,17,1))
             ax.set_yticklabels([r'',r'$12$',r'$13$',r'$14$',r'$15$',r'$16$'],fontsize=self.axsize)
+            ax.set_ylabel(r'$\log_{10}(Y_{X} \, [M_{\odot}keV])$', fontsize=self.mysize, labelpad=10)
         if self.property == "Lx":
             ax.set_ylim([23, 29])
             ax.set_yticks(np.arange(23,30,1))
             ax.set_yticklabels([r'',r'$24$',r'$25$',r'$26$',r'$27$',r'$28$','$29$'],fontsize=self.axsize)
+            ax.set_ylabel(r'$\log_{10}(L_{X} \, [keV^{1/2}M^{2}_{\odot}Mpc^{-3}])$', fontsize=self.mysize, labelpad=10)
 
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
@@ -1165,11 +1170,23 @@ class Scaling_Relation:
             ax.set_ylim([-0.2, 0.8])
             ax.set_yticks(np.arange(-0.2,0.8,0.2))
             ax.set_yticklabels([r'',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$'],fontsize=self.axsize)
-        else:
+            ax.set_ylabel(r'$\Delta \overline{T}_{\textnormal{gas}} / \overline{T}_{\textnormal{gas,GR}}$', fontsize=self.axsize, labelpad=10)
+        elif self.property == "SZ":
             ax.set_ylim([-0.4, 0.8])
             ax.set_yticks(np.arange(-0.4,0.8,0.2))
             ax.set_yticklabels([r'',r'$-0.2$',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$',r''],fontsize=self.axsize)
-
+            ax.set_ylabel(r'$\Delta Y_{SZ} / Y_{SZ,GR}$', fontsize=self.axsize, labelpad=10)
+        elif self.property == "Yx":
+            ax.set_ylim([-0.4, 0.8])
+            ax.set_yticks(np.arange(-0.4,0.8,0.2))
+            ax.set_yticklabels([r'',r'$-0.2$',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$',r''],fontsize=self.axsize)
+            ax.set_ylabel(r'$\Delta Y_{X} / Y_{X,GR}$', fontsize=self.axsize, labelpad=10)
+        elif self.property == "Lx":
+            ax.set_ylim([-0.4, 0.8])
+            ax.set_yticks(np.arange(-0.4,0.8,0.2))
+            ax.set_yticklabels([r'',r'$-0.2$',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$',r''],fontsize=self.axsize)
+            ax.set_ylabel(r'$\Delta L_{X} / L_{X,GR}$', fontsize=self.axsize, labelpad=10)
+        ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
         
         ax.xaxis.set_tick_params(width=1.5)
         ax.yaxis.set_tick_params(width=1.5)
@@ -1182,40 +1199,4 @@ class Scaling_Relation:
         ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
 
 
-if __name__ == "__main__":
-    simulation = "L302_N1136"
-    models = ["GR","F60","F55","F50","F45","F40"]
-    realisations = ["1", "1","1","1","1","1"]
-    system = ["cosma8", "cosma6","cosma6","cosma6","cosma6","cosma6"]
-    plot_labels = [r'L302-N1136-GR', r'L302-N1136-F60',r'L302-N1136-F55',r'L302-N1136-F50',r'L302-N1136-F45',r'L302-N1136-F40']
-    colors = ['black', 'blue','magenta','green','orange','red']
-    param_defaults = []
-    snapshots = [21]
-    plot_name = "L302_scaling_Relations"
-    show_spread = True
 
-    file_ending = "all"   # use for simulation tests
-
-    core_frac = 0.15
-
-    mass_cut = 5e13   # 1e13 Msun
-    delta = "all"   # 500 or 200 or "all"
-    
-    rescaling = "true"   # effective or true
-    use_analytical = True   # use tanh formula to find ratio?
-    proxy_types = ["T"]   # T or SZ or Yx or Lx
-    temp_weight = "mass"
-    no_core = True   # True: exclude r < core_frac * R500 core region
-    mass_bins = ["low", "middle"]
-#   for (rid, r) in enumerate(realisations):
-#       for snapshot in snapshots:
-#           print(snapshot)
-#           cp = ClusterProperties(simulation, models[rid], r, snapshot, system=system[rid], mass_cut=mass_cut, delta=delta, file_ending=file_ending, rescaling=rescaling, core_frac = core_frac)
-#           cp.cluster_properties()
-#            for proxy in proxy_types:
-#                cp.proxy_scaling_relation(proxy_type=proxy, no_core=no_core, temp_weight=temp_weight, use_analytical=use_analytical)
-#            for mass_bin in mass_bins:
-#                cp.profile(mass_bin = mass_bin)
-    print('data accessed')
-    sr = Scaling_Relation(simulation, models, realisations, snapshots[0], file_ending=file_ending, labels=plot_labels, colors=colors, defaults=param_defaults, plot_name=plot_name, system=system, show_spread=show_spread)
-    sr.redshift()
