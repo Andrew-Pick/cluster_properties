@@ -400,7 +400,7 @@ class LightCone:
 
         return cluster_positions, cluster_masses
 
-    def calc_y(self, save_y_map="/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/L302_N1136/GR/pickle_files/y_map.pkl"):
+    def calc_y(self, save_y_map=None):
         """
         Compute the SZ y-map using gas-cell contributions with spherical kernel.
     
@@ -610,7 +610,7 @@ class LightCone:
                 V_partial   = volumes[zsel]
                 add_to_D_map(P_partial, pos_partial / a, s_partial, V_partial)
 
-        self.rescale = D0/D_map
+            self.rescale = D0/D_map
 
             # full boxes
             np.random.seed(1273)
@@ -644,9 +644,11 @@ class LightCone:
                 add_to_y_map(P_partial, pos_partial / a, radii_partial, V_partial)
 
         # Save to pickle file
-        with open(save_y_map, "wb") as f:
-            pickle.dump(y_map, f)
-#        print(f'D_map <= {np.max(D_map)}')
+        if save_y_map:
+            with open(save_y_map, "wb") as f:
+                pickle.dump(y_map, f)
+        else:
+            print("y_map not saved")
         return y_map
 
     def signal_noise_ratio(self, y):
