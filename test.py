@@ -344,7 +344,25 @@ class LightCone:
                 pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
                 print(f'Max position = {np.max(pos)}')
                 print(f'Min position = {np.min(pos)}')
-                cluster_positions = np.concatenate((cluster_positions, pos), axis=0)
+
+                x, y, z = pos[:]
+                z = chi_lo * a + z
+
+                # Project positions into angular coordinates
+                theta_x = (x - (Lbox * a)/2) / D_M   # radians
+                theta_y = (y - (Lbox * a)/2) / D_M   # radians
+
+                # Apply FOV mask
+                fov_mask = (np.abs(theta_x) < self.fov_rad/2) & (np.abs(theta_y) < self.fov_rad/2)
+
+                theta_x = theta_x[fov_mask]
+                theta_y = theta_y[fov_mask]
+                z = z[fov_mask]
+                M500 = M500[fov_mask]
+
+                pos_fov = np.column_stack((theta_x, theta_y, z))
+
+                cluster_positions = np.concatenate((cluster_positions, pos_fov), axis=0)
                 cluster_masses = np.concatenate((cluster_masses, M500), axis=0)
 
             # partial box (take n_frac_slices)
@@ -359,8 +377,26 @@ class LightCone:
                        ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
                 pos_partial = pos[zsel]
                 mass_partial = M500[zsel]
-                cluster_positions = np.concatenate((cluster_positions, pos_partial), axis=0)
-                cluster_masses = np.concatenate((cluster_masses, mass_partial), axis=0)
+
+                x, y, z = pos_partial[:]
+                z = chi_lo * a + z
+
+                # Project positions into angular coordinates
+                theta_x = (x - (Lbox * a)/2) / D_M   # radians
+                theta_y = (y - (Lbox * a)/2) / D_M   # radians
+
+                # Apply FOV mask
+                fov_mask = (np.abs(theta_x) < self.fov_rad/2) & (np.abs(theta_y) < self.fov_rad/2)
+
+                theta_x = theta_x[fov_mask]
+                theta_y = theta_y[fov_mask]
+                z = z[fov_mask]
+                M500 = M500[fov_mask]
+
+                pos_fov = np.column_stack((theta_x, theta_y, z))
+
+                cluster_positions = np.concatenate((cluster_positions, pos_fov), axis=0)
+                cluster_masses = np.concatenate((cluster_masses, M500), axis=0)
 
         return cluster_positions, cluster_masses
 
