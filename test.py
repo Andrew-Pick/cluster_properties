@@ -431,12 +431,12 @@ class LightCone:
             pressures, positions, volumes = self.load_pressure_grid(snap)
             print(f'number of gas cells per snapshot = {len(positions)}')
 
-            x = positions[:,0] % Lbox
-            y = positions[:,1] % Lbox
-            z = positions[:,2] % Lbox
-
             # scale factor
             a = 1.0 / (1.0 + z_mid)
+
+            x = positions[:,0] % Lbox*a
+            y = positions[:,1] % Lbox*a
+            z = positions[:,2] % Lbox*a
 
             # transverse comoving distance
             D_A = angular_diameter_distance(z_mid) * 1000  # kpc
@@ -477,10 +477,11 @@ class LightCone:
             # Pre-compute cell radius from volume (in kpc^3 proper)
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
-            s = np.maximum(R_cell_kpc / a, R_pix)
+            radii = np.maximum(R_cell_kpc / a, R_pix)
             pressures = pressures * volumes / (s * a)**2 * 1.6022e-9 / (3.086e21**2)  # Convert to proper erg cm^-3
 
-            def add_to_y_map(P, pos, radii, vol):
+
+            def add_to_D_map(P, pos, radii, vol):
                 # loop over gas cells
                 for i in range(len(pos)):
                     x0, y0, z0 = pos[i]  # comoving kpc
@@ -521,6 +522,53 @@ class LightCone:
                     # line-of-sight path length through spherical cell
                     dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a  # proper kpc
 
+                    flat_idxs = np.array(idxs)[mask]
+
+                    D_map.ravel()[flat_idxs] += dl
+#                    print(f"ymap = {y_map.ravel()[flat_idxs]}")
+
+
+            def add_to_y_map(P, pos, radii, vol):
+                # loop over gas cells
+                for i in range(len(pos)):
+                    x0, y0, z0 = pos[i]  # comoving kpc
+                    s = radii[i]  # comoving kpc
+                    P_cell = P[i]
+
+                    if i % 1000000 == 0:
+                        print(f"i = {i}")
+
+                    # proper radius and path length conversion
+#                    s_proper = s * a              # proper kpc
+#                    dl_cm_factor = 3.085677581491367e21  # kpc -> cm
+
+                    # find all pixel centers within radius R
+                    idxs =  tree.query_ball_point([x0, y0], r=s)
+                    if not idxs:
+                        continue
+
+                    # mask pixels within the projected radius
+                    pix_xy = pix_coords[idxs]  # comoving kpc
+                    r2 = (pix_xy[:,0] - x0)**2 + (pix_xy[:,1] - y0)**2
+#                    r2 = (x_pix - x0)**2 + (y_pix - y0)**2
+                    mask = r2 <= s**2
+                    #print(f"r2[mask] = {r2[mask]}")
+                    if i % 1000000 == 0:
+                        print(f"z_mid = {z_mid}")
+                        #print(f"x0 = {x0}")
+                        #print(f"r2 = {r2}")
+                        #print(f"s_proper = {s_proper}")
+                    if not np.any(mask):
+                        continue
+
+                    if i % 1000000 == 0:
+#                        print(f"R_cell = {R_cell}")
+#                        print(f"s = {s}")
+                        print(f"r2[mask] = {r2[mask]}")
+
+                    # line-of-sight path length through spherical cell
+                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a * self.rescale  # proper kpc
+
                     # Calculate normalised smoothing kernel w
                     w = dl/np.sum(dl)
 #                    sum = np.sum(dl)
@@ -529,7 +577,6 @@ class LightCone:
                     flat_idxs = np.array(idxs)[mask]
                     y_map.ravel()[flat_idxs] += (sigma_T / m_e_c2) * P_cell * w  # proper
 
-                    D_map.ravel()[flat_idxs] += dl
 #                    print(f"ymap = {y_map.ravel()[flat_idxs]}")
 
             # full boxes
@@ -545,7 +592,7 @@ class LightCone:
                 pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
                 print(f'Max position = {np.max(pos)}')
                 print(f'Min position = {np.min(pos)}')
-                add_to_y_map(pressures, pos / a, s, volumes)
+                add_to_D_map(pressures, pos / a, s, volumes)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
@@ -561,11 +608,40 @@ class LightCone:
                 P_partial   = pressures[zsel]
                 s_partial   = s[zsel]
                 V_partial   = volumes[zsel]
-                add_to_y_map(P_partial, pos_partial / a, s_partial, V_partial)
+                add_to_D_map(P_partial, pos_partial / a, s_partial, V_partial)
 
-#        dl = D_map * D_map/D0
-#        w = dl/np.sum(dl)
-#        y_map = y_map * w
+        self.rescale = D0/D_map
+
+            # full boxes
+            np.random.seed(1273)
+            pos = positions #[0:10000000,:]
+            print(f'Max position = {np.max(pos)}')
+            print(f'Min position = {np.min(pos)}')
+            print(f'Lmap_prop_kpc = {Lmap_com_kpc * a}')
+            print(f'proper Lbox = {Lbox * a}')
+#            partial_thickness = 0
+#            n_full = 1
+            for _ in range(n_full):
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
+                print(f'Max position = {np.max(pos)}')
+                print(f'Min position = {np.min(pos)}')
+                add_to_y_map(pressures, pos / a, radii, volumes)
+
+            # partial box (take n_frac_slices)
+            if partial_thickness > 0:
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
+                zpos = pos[:, 2]
+
+                # pick a random starting slice and wrap if needed
+                z0 = np.random.uniform(0, Lbox * a)
+                zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
+                       if z0 + partial_thickness <= Lbox else \
+                       ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
+                pos_partial = pos[zsel]
+                P_partial   = pressures[zsel]
+                radii_partial   = radii[zsel]
+                V_partial   = volumes[zsel]
+                add_to_y_map(P_partial, pos_partial / a, radii_partial, V_partial)
 
         # Save to pickle file
         with open(save_y_map, "wb") as f:
