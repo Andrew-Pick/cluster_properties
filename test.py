@@ -154,18 +154,18 @@ class LightCone:
 
     def load_cluster_data(self, snap):
         if self.model == "GR" or self.simulation == "L302_N1136":
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_SZ.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending)
-            print(pressure_dumpfile)
+            positions_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending)
+            print(positions_dumpfile)
         else:
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s_SZ.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending, self.rescaling)
+            positions_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, snap, self.file_ending, self.rescaling)
 
-        if os.path.exists(pressure_dumpfile):
-            print("%s exists!" % (pressure_dumpfile))
-            df = open(pressure_dumpfile, 'rb')
+        if os.path.exists(positions_dumpfile):
+            print("%s exists!" % (positions_dumpfile))
+            df = open(positions_dumpfile, 'rb')
             (M500, M200, Ysz_with_core, Ysz_no_core, pos) = pickle.load(df)
             return M500, M200, Ysz_with_core, Ysz_no_core, pos
         else:
-            print("%s does not exist!" % (group_dumpfile))
+            print("%s does not exist!" % (positions_dumpfile))
             sys.exit(0)
 
     def grid_pressure(self, pressure, positions, volumes, Ngrid, Lbox=301.75):
@@ -284,18 +284,16 @@ class LightCone:
 
         Lbox = self.Lbox
 
-        cluster_positions = np.array([])
-        cluster_masses = np.array([])
+        cluster_positions = []
+        cluster_masses = []
 
         for z_lo, z_hi, z_mid in zip(self.z_edges[:-1], self.z_edges[1:], self.z_mids):
 
             snap, snap_z = find_snapshot_near(z_mid)
 
             M500, M200, Ysz_with_core, Ysz_no_core, positions = self.load_cluster_data(snap)
-
-            x = positions[:,0] % Lbox
-            y = positions[:,1] % Lbox
-            z = positions[:,2] % Lbox
+            print(f'positions = {positions}')
+            print(f'M500 = {M500}')
 
             # scale factor
             a = 1.0 / (1.0 + z_mid)
@@ -329,9 +327,9 @@ class LightCone:
             partial_thickness = max(0.0, min(frac * Lbox, Lbox))
 
             # Pre-compute cell radius from volume (in kpc^3 proper)
-            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
+#            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
-            radii = np.maximum(R_cell_kpc / a, R_pix)
+#            radii = np.maximum(R_cell_kpc / a, R_pix)
 
             # full boxes
             np.random.seed(1273)
@@ -347,7 +345,9 @@ class LightCone:
                 print(f'Max position = {np.max(pos)}')
                 print(f'Min position = {np.min(pos)}')
 
-                x, y, z = pos[:]
+                x = pos[:,0]
+                y = pos[:,1]
+                z = pos[:,2]
                 z = chi_lo * a + z
 
                 # Project positions into angular coordinates
@@ -356,17 +356,18 @@ class LightCone:
 
                 # Apply FOV mask
                 fov_mask = (np.abs(theta_x) < self.fov_rad/2) & (np.abs(theta_y) < self.fov_rad/2)
+                print(f'fov_mask = {fov_mask}')
 
                 # Positions on fov
                 theta_x = theta_x[fov_mask]
                 theta_y = theta_y[fov_mask]
                 z = z[fov_mask]
-                M500 = M500[fov_mask]
+                mass = M500[fov_mask]
 
                 pos_fov = np.column_stack((theta_x, theta_y, z))
 
-                cluster_positions = np.concatenate((cluster_positions, pos_fov), axis=0)
-                cluster_masses = np.concatenate((cluster_masses, M500), axis=0)
+                cluster_positions.append(pos_fov)
+                cluster_masses.append(mass)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
@@ -381,7 +382,9 @@ class LightCone:
                 pos_partial = pos[zsel]
                 mass_partial = M500[zsel]
 
-                x, y, z = pos_partial[:]
+                x = pos_partial[:,0]
+                y = pos_partial[:,1]
+                z = pos_partial[:,2]
                 z = chi_lo * a + z
 
                 # Project positions into angular coordinates
@@ -394,14 +397,16 @@ class LightCone:
                 theta_x = theta_x[fov_mask]
                 theta_y = theta_y[fov_mask]
                 z = z[fov_mask]
-                M500 = M500[fov_mask]
+                mass = mass_partial[fov_mask]
 
                 pos_fov = np.column_stack((theta_x, theta_y, z))
 
-                cluster_positions = np.concatenate((cluster_positions, pos_fov), axis=0)
-                cluster_masses = np.concatenate((cluster_masses, M500), axis=0)
+                cluster_positions.append(pos_fov)
+                cluster_masses.append(mass)
 
-        return cluster_positions, cluster_masses
+        all_positions = np.concatenate(cluster_positions, axis=0)  # shape: (total_N, 3)
+        all_masses = np.concatenate(cluster_masses, axis=0)        # shape: (total_N,)
+        return all_positions, all_masses
 
     def calc_y(self, save_y_map=None):
         """
