@@ -252,10 +252,10 @@ class ClusterProperties:
 
     def cluster_SZ(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
             print(pressure_dumpfile)
         else:
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
+            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
 
         # define logarithmic radial bins, units kpc
         self.nbins = 28
