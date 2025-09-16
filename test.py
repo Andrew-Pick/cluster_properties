@@ -241,7 +241,7 @@ class LightCone:
     def plot_y_map(self, y_map, output=None, min=1e-7, log=True):
         npix = y_map.shape[0]
         fov_arcmin = self.fov_deg * 60.0
-        extent = [0, fov_arcmin, 0, fov_arcmin]  # arcmin
+        extent = [-fov_arcmin/2, fov_arcmin/2, -fov_arcmin/2, fov_arcmin/2]  # arcmin
 
         plt.figure(figsize=(6,5))
         if log:
@@ -281,6 +281,8 @@ class LightCone:
 
 
     def cluster_positions(self):
+
+        Lbox = self.Lbox
 
         cluster_positions = np.array([])
         cluster_masses = np.array([])
@@ -329,7 +331,7 @@ class LightCone:
             # Pre-compute cell radius from volume (in kpc^3 proper)
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
-            s = np.maximum(R_cell_kpc / a, R_pix)
+            radii = np.maximum(R_cell_kpc / a, R_pix)
 
             # full boxes
             np.random.seed(1273)
@@ -349,12 +351,13 @@ class LightCone:
                 z = chi_lo * a + z
 
                 # Project positions into angular coordinates
-                theta_x = (x - (Lbox * a)/2) / D_M   # radians
-                theta_y = (y - (Lbox * a)/2) / D_M   # radians
+                theta_x = (x - (Lbox * a)/2) / D_A   # radians, everything in proper units
+                theta_y = (y - (Lbox * a)/2) / D_A   # radians
 
                 # Apply FOV mask
                 fov_mask = (np.abs(theta_x) < self.fov_rad/2) & (np.abs(theta_y) < self.fov_rad/2)
 
+                # Positions on fov
                 theta_x = theta_x[fov_mask]
                 theta_y = theta_y[fov_mask]
                 z = z[fov_mask]
@@ -382,8 +385,8 @@ class LightCone:
                 z = chi_lo * a + z
 
                 # Project positions into angular coordinates
-                theta_x = (x - (Lbox * a)/2) / D_M   # radians
-                theta_y = (y - (Lbox * a)/2) / D_M   # radians
+                theta_x = (x - (Lbox * a)/2) / D_A   # radians
+                theta_y = (y - (Lbox * a)/2) / D_A   # radians
 
                 # Apply FOV mask
                 fov_mask = (np.abs(theta_x) < self.fov_rad/2) & (np.abs(theta_y) < self.fov_rad/2)
@@ -478,7 +481,7 @@ class LightCone:
             R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
             radii = np.maximum(R_cell_kpc / a, R_pix)
-            pressures = pressures * volumes / (s * a)**2 * 1.6022e-9 / (3.086e21**2)  # Convert to proper erg cm^-3
+            pressures = pressures * volumes / (radii * a)**2 * 1.6022e-9 / (3.086e21**2)  # Convert to proper erg cm^-3
 
 
             def add_to_D_map(P, pos, radii, vol):
@@ -592,7 +595,7 @@ class LightCone:
                 pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
                 print(f'Max position = {np.max(pos)}')
                 print(f'Min position = {np.min(pos)}')
-                add_to_D_map(pressures, pos / a, s, volumes)
+                add_to_D_map(pressures, pos / a, radii, volumes)
 
             # partial box (take n_frac_slices)
             if partial_thickness > 0:
@@ -606,9 +609,9 @@ class LightCone:
                        ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
                 pos_partial = pos[zsel]
                 P_partial   = pressures[zsel]
-                s_partial   = s[zsel]
+                radii_partial   = radii[zsel]
                 V_partial   = volumes[zsel]
-                add_to_D_map(P_partial, pos_partial / a, s_partial, V_partial)
+                add_to_D_map(P_partial, pos_partial / a, radii_partial, V_partial)
 
             self.rescale = D0/D_map
 
