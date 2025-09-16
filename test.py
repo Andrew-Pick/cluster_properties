@@ -326,6 +326,9 @@ class LightCone:
             frac   = (dchi / Lbox) - n_full
             partial_thickness = max(0.0, min(frac * Lbox, Lbox))
 
+            # Pre-compute pixel scale
+            pixel_scale = self.npix / self.fov_rad  # pixels per radian
+
             # Pre-compute cell radius from volume (in kpc^3 proper)
 #            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
 
@@ -364,9 +367,19 @@ class LightCone:
                 z = z[fov_mask]
                 mass = M500[fov_mask]
 
-                pos_fov = np.column_stack((theta_x, theta_y, z))
+                # Convert to pixel coordinates
+                x_pix = ((theta_x + self.fov_rad/2) * pixel_scale).astype(int)
+                y_pix = ((theta_y + self.fov_rad/2) * pixel_scale).astype(int)
 
-                cluster_positions.append(pos_fov)
+                # Clip to ensure indices stay in bounds
+                x_pix = np.clip(x_pix, 0, self.npix-1)
+                y_pix = np.clip(y_pix, 0, self.npix-1)
+
+                pos_pix = np.column_stack((x_pix, y_pix, z))
+
+#                pos_fov = np.column_stack((theta_x, theta_y, z))
+
+                cluster_positions.append(pos_pix)
                 cluster_masses.append(mass)
 
             # partial box (take n_frac_slices)
@@ -399,9 +412,19 @@ class LightCone:
                 z = z[fov_mask]
                 mass = mass_partial[fov_mask]
 
-                pos_fov = np.column_stack((theta_x, theta_y, z))
+                # Convert to pixel coordinates
+                x_pix = ((theta_x + self.fov_rad/2) * pixel_scale).astype(int)
+                y_pix = ((theta_y + self.fov_rad/2) * pixel_scale).astype(int)
 
-                cluster_positions.append(pos_fov)
+                # Clip to ensure indices stay in bounds
+                x_pix = np.clip(x_pix, 0, self.npix-1)
+                y_pix = np.clip(y_pix, 0, self.npix-1)
+
+                pos_pix = np.column_stack((x_pix, y_pix, z))
+
+#                pos_fov = np.column_stack((theta_x, theta_y, z))
+
+                cluster_positions.append(pos_pix)
                 cluster_masses.append(mass)
 
         all_positions = np.concatenate(cluster_positions, axis=0)  # shape: (total_N, 3)
