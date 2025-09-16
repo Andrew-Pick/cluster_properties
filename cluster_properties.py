@@ -252,10 +252,10 @@ class ClusterProperties:
 
     def cluster_SZ(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
+            positions_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
             print(pressure_dumpfile)
         else:
-            pressure_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
+            positions_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
 
         # define logarithmic radial bins, units kpc
         self.nbins = 28
@@ -281,8 +281,8 @@ class ClusterProperties:
         print("Min / Max mass: %.2f / %.2f" % (np.log10(min(self.group_m500[self.sample] * self.s.header.hubble)), np.log10(max(self.group_m500[self.sample] * self.s.header.hubble))))
         print("Sample size: ", len(self.sample))
 
-        if not os.path.exists(group_dumpfile):
-            print("Dumpfile %s does not exist" % (group_dumpfile))
+        if not os.path.exists(positions_dumpfile):
+            print("Dumpfile %s does not exist" % (positions_dumpfile))
 
             # initialise property arrays
             self.vol_temp_profile = np.zeros((len(self.sample),self.nbins))
@@ -463,7 +463,7 @@ class ClusterProperties:
             print("Total group cells: ", cell_counter)
 
 #           df = open(group_dumpfile,"w+")
-            df = open(group_dumpfile,"wb+")
+            df = open(positions_dumpfile,"wb+")
             if self.non_rad:
                 pickle.dump((self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]), df)
             else:
@@ -471,9 +471,9 @@ class ClusterProperties:
             df.close()
 
         else:
-            print("%s exists!" % (group_dumpfile))
+            print("%s exists!" % (positions_dumpfile))
 #           df = open(group_dumpfile, 'r')
-            df = open(group_dumpfile, 'rb')
+            df = open(positions_dumpfile, 'rb')
             if self.non_rad:
                 (self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]) = pickle.load(df)
             else:
