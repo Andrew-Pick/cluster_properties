@@ -1046,7 +1046,7 @@ class Scaling_Relation:
                 median_props1.append(median_prop1)
                 median_props_rescaled1.append(median_prop_rescaled1)
     
-        ax.set_xlim([13.1, 15.4])
+        ax.set_xlim([13.3, 15.4])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_xticklabels(r'')
@@ -1160,7 +1160,7 @@ class Scaling_Relation:
                 if mid == 1:
                     ax.plot(mean_log_mass, np.linspace(0,0, len(mean_log_mass)), linewidth=self.lw, linestyle='-', color='black')
 
-        ax.set_xlim([13.1, 15.4])
+        ax.set_xlim([13.3, 15.4])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_xticklabels(r'')
