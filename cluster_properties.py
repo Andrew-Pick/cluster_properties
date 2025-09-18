@@ -253,7 +253,7 @@ class ClusterProperties:
     def cluster_SZ(self, group_id = -1):
         if self.model == "GR" or self.simulation == "L302_N1136":
             positions_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.core_label)
-            print(pressure_dumpfile)
+            print(positions_dumpfile)
         else:
             positions_dumpfile = self.fileroot+"pickle_files/%s_%s_%s_s%d_%s_rescaling%s%s_cluster_SZ.pickle" % (self.simulation, self.model, self.realisation, self.snapshot, self.file_ending, self.rescaling, self.core_label)
 
@@ -463,6 +463,7 @@ class ClusterProperties:
             print("Total group cells: ", cell_counter)
 
 #           df = open(group_dumpfile,"w+")
+            print(f'Saved at {positions_dumpfile}')
             df = open(positions_dumpfile,"wb+")
             if self.non_rad:
                 pickle.dump((self.group_m500[self.sample], self.group_m200[self.sample], self.Ysz_with_core, self.Ysz_no_core, self.group_pos[self.sample]), df)

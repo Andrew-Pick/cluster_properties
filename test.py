@@ -292,8 +292,8 @@ class LightCone:
             snap, snap_z = find_snapshot_near(z_mid)
 
             M500, M200, Ysz_with_core, Ysz_no_core, positions = self.load_cluster_data(snap)
-            print(f'positions = {positions}')
-            print(f'M500 = {M500}')
+            print(f'positions.shape = {positions.shape}')
+            print(f'M500.shape = {M500.shape}')
 
             # scale factor
             a = 1.0 / (1.0 + z_mid)
@@ -365,7 +365,7 @@ class LightCone:
                 theta_x = theta_x[fov_mask]
                 theta_y = theta_y[fov_mask]
                 z = z[fov_mask]
-                mass = M500[fov_mask]
+                mass = M200[fov_mask]
 
                 # Convert to pixel coordinates
                 x_pix = ((theta_x + self.fov_rad/2) * pixel_scale).astype(int)
@@ -393,7 +393,7 @@ class LightCone:
                        if z0 + partial_thickness <= Lbox else \
                        ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
                 pos_partial = pos[zsel]
-                mass_partial = M500[zsel]
+                mass_partial = M200[zsel]
 
                 x = pos_partial[:,0]
                 y = pos_partial[:,1]
@@ -431,25 +431,10 @@ class LightCone:
         all_masses = np.concatenate(cluster_masses, axis=0)        # shape: (total_N,)
         return all_positions, all_masses
 
-    def calc_y(self, save_y_map=None):
-        """
-        Compute the SZ y-map using gas-cell contributions with spherical kernel.
-    
-        Parameters
-        ----------
-        positions : array (N,3)
-            Gas cell positions in comoving Mpc/h (x,y,z)
-        radii : array (N,)
-            Gas cell radii in comoving Mpc/h
-        pressure : array (N,)
-            Gas cell electron pressure in erg/cm^3 (proper)
-        z_mid : float
-            Redshift of the shell
-        """
-        Lbox = self.Lbox
 
-        # --- initialize y map ---
-        y_map = np.zeros((self.npix, self.npix), dtype=np.float32)
+    def calc_D(self):
+
+        Lbox = self.Lbox
 
         D_map = np.zeros((self.npix, self.npix), dtype=np.float32)  # integrate dl for each pixel, to compare with total distance to z=3
         D0 = comoving_distance(3) * 1000 * 1/(1+3)
@@ -461,6 +446,10 @@ class LightCone:
             print('Loading data')
             pressures, positions, volumes = self.load_pressure_grid(snap)
             print(f'number of gas cells per snapshot = {len(positions)}')
+
+#            pressures = pressures[0:1000000]
+#            positions = positions[0:1000000,:]
+#            volumes = volumes[0:1000000]
 
             # scale factor
             a = 1.0 / (1.0 + z_mid)
@@ -511,7 +500,6 @@ class LightCone:
             radii = np.maximum(R_cell_kpc / a, R_pix)
             pressures = pressures * volumes / (radii * a)**2 * 1.6022e-9 / (3.086e21**2)  # Convert to proper erg cm^-3
 
-
             def add_to_D_map(P, pos, radii, vol):
                 # loop over gas cells
                 for i in range(len(pos)):
@@ -558,6 +546,121 @@ class LightCone:
                     D_map.ravel()[flat_idxs] += dl
 #                    print(f"ymap = {y_map.ravel()[flat_idxs]}")
 
+            # full boxes
+            np.random.seed(1273)
+            pos = positions #[0:10000,:]
+            print(f'Max position = {np.max(pos)}')
+            print(f'Min position = {np.min(pos)}')
+            print(f'Lmap_prop_kpc = {Lmap_com_kpc * a}')
+            print(f'proper Lbox = {Lbox * a}')
+#            partial_thickness = 0
+#            n_full = 1
+            for _ in range(n_full):
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
+                print(f'Max position = {np.max(pos)}')
+                print(f'Min position = {np.min(pos)}')
+                add_to_D_map(pressures, pos / a, radii, volumes)
+
+            # partial box (take n_frac_slices)
+            if partial_thickness > 0:
+                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
+                zpos = pos[:, 2]
+
+                # pick a random starting slice and wrap if needed
+                z0 = np.random.uniform(0, Lbox * a)
+                zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
+                       if z0 + partial_thickness <= Lbox else \
+                       ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
+                pos_partial = pos[zsel]
+                P_partial   = pressures[zsel]
+                radii_partial   = radii[zsel]
+                V_partial   = volumes[zsel]
+                add_to_D_map(P_partial, pos_partial / a, radii_partial, V_partial)
+
+        self.rescale = np.where(D_map != 0, D0/D_map, 0)
+
+    def calc_y(self, save_y_map=None):
+        """
+        Compute the SZ y-map using gas-cell contributions with spherical kernel.
+    
+        Parameters
+        ----------
+        positions : array (N,3)
+            Gas cell positions in comoving Mpc/h (x,y,z)
+        radii : array (N,)
+            Gas cell radii in comoving Mpc/h
+        pressure : array (N,)
+            Gas cell electron pressure in erg/cm^3 (proper)
+        z_mid : float
+            Redshift of the shell
+        """
+        Lbox = self.Lbox
+
+        # --- initialize y map ---
+        y_map = np.zeros((self.npix, self.npix), dtype=np.float32)
+
+        self.calc_D()
+
+        for z_lo, z_hi, z_mid in zip(self.z_edges[:-1], self.z_edges[1:], self.z_mids):
+
+            snap, snap_z = find_snapshot_near(z_mid)
+
+            print('Loading data')
+            pressures, positions, volumes = self.load_pressure_grid(snap)
+            print(f'number of gas cells per snapshot = {len(positions)}')
+
+#            pressures = pressures[0:1000000]
+#            positions = positions[0:1000000,:]
+#            volumes = volumes[0:1000000]
+
+            # scale factor
+            a = 1.0 / (1.0 + z_mid)
+
+            x = positions[:,0] % Lbox*a
+            y = positions[:,1] % Lbox*a
+            z = positions[:,2] % Lbox*a
+
+            # transverse comoving distance
+            D_A = angular_diameter_distance(z_mid) * 1000  # kpc
+            D_M = (1.0 + z_mid) * D_A  # kpc
+
+            # FOV in comoving kpc at shell
+            Lmap_com_kpc = D_M * self.fov_rad
+            print(f"Lmap = {Lmap_com_kpc}")
+
+            # How many tiles in x,y?
+            nx = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
+            ny = max(1, int(np.ceil(Lmap_com_kpc / Lbox)))
+
+            # --- comoving transverse pixel positions ---
+            theta = np.linspace(Lbox * a / (2*D_A) - self.fov_rad/2, Lbox * a / (2*D_A) + self.fov_rad/2, self.npix)
+            phi   = np.linspace(Lbox * a / (2*D_A) - self.fov_rad/2, Lbox * a / (2*D_A) + self.fov_rad/2, self.npix)
+            theta_grid, phi_grid = np.meshgrid(theta, phi)
+            x_pix = D_M * theta_grid
+            y_pix = D_M * phi_grid
+
+            # Flatten into a (Npix^2, 2) array of pixel centers
+            pix_coords = np.vstack([x_pix.ravel(), y_pix.ravel()]).T
+            tree = cKDTree(pix_coords)
+
+            R_pix = self.pix_rad * D_M  # comoving kpc
+#            print(f"R_pix = {R_pix}")
+
+            # Shell comoving thickness in *kpc* (comoving)
+            chi_lo = comoving_distance(z_lo) * 1000  # kpc
+            chi_hi = comoving_distance(z_hi) * 1000  # kpc
+            dchi = (chi_hi - chi_lo)  # kpc
+
+            # LOS tiling counts
+            n_full = int(dchi // Lbox)
+            frac   = (dchi / Lbox) - n_full
+            partial_thickness = max(0.0, min(frac * Lbox, Lbox))
+
+            # Pre-compute cell radius from volume (in kpc^3 proper)
+            R_cell_kpc = 2.5 * (3.0 * np.maximum(volumes, 0.0) / (4.0 * np.pi))**(1.0/3.0)  # proper kpc
+
+            radii = np.maximum(R_cell_kpc / a, R_pix)
+            pressures = pressures * volumes / (radii * a)**2 * 1.6022e-9 / (3.086e21**2)  # Convert to proper erg cm^-3
 
             def add_to_y_map(P, pos, radii, vol):
                 # loop over gas cells
@@ -597,12 +700,13 @@ class LightCone:
 #                        print(f"s = {s}")
                         print(f"r2[mask] = {r2[mask]}")
 
+                    flat_idxs = np.array(idxs)[mask]
+
                     # line-of-sight path length through spherical cell
-                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a * self.rescale  # proper kpc
+                    dl = 2.0 * np.sqrt(s**2 - r2[mask]) * a * self.rescale.ravel()[flat_idxs]  # proper kpc
 
                     # Calculate normalised smoothing kernel w
                     w = dl/np.sum(dl)
-#                    sum = np.sum(dl)
 
                     # add SZ contribution
                     flat_idxs = np.array(idxs)[mask]
@@ -612,40 +716,9 @@ class LightCone:
 
             # full boxes
             np.random.seed(1273)
-            pos = positions #[0:10000000,:]
-            print(f'Max position = {np.max(pos)}')
-            print(f'Min position = {np.min(pos)}')
-            print(f'Lmap_prop_kpc = {Lmap_com_kpc * a}')
-            print(f'proper Lbox = {Lbox * a}')
-#            partial_thickness = 0
-#            n_full = 1
-            for _ in range(n_full):
-                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
-                print(f'Max position = {np.max(pos)}')
-                print(f'Min position = {np.min(pos)}')
-                add_to_D_map(pressures, pos / a, radii, volumes)
-
-            # partial box (take n_frac_slices)
-            if partial_thickness > 0:
-                pos = _rand_shift_flip_3d(pos, Lbox * a, Lbox * a)
-                zpos = pos[:, 2]
-
-                # pick a random starting slice and wrap if needed
-                z0 = np.random.uniform(0, Lbox * a)
-                zsel = ((zpos >= z0) & (zpos < z0 + partial_thickness)) \
-                       if z0 + partial_thickness <= Lbox else \
-                       ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
-                pos_partial = pos[zsel]
-                P_partial   = pressures[zsel]
-                radii_partial   = radii[zsel]
-                V_partial   = volumes[zsel]
-                add_to_D_map(P_partial, pos_partial / a, radii_partial, V_partial)
-
-            self.rescale = D0/D_map
-
-            # full boxes
-            np.random.seed(1273)
-            pos = positions #[0:10000000,:]
+            pos = positions #[0:10000,:]
+#            pressures = pressures[0:10000,:]
+#            volumes = volumes[0:10000,:]
             print(f'Max position = {np.max(pos)}')
             print(f'Min position = {np.min(pos)}')
             print(f'Lmap_prop_kpc = {Lmap_com_kpc * a}')
@@ -678,13 +751,12 @@ class LightCone:
         if save_y_map:
             with open(save_y_map, "wb") as f:
                 pickle.dump(y_map, f)
-        else:
-            print("y_map not saved")
+            print(f'Saved at {save_y_map}')
         return y_map
 
     def signal_noise_ratio(self, y):
         mean = np.mean(y)
-        N = len(y)
+        N = len(y.flatten())
         rms = np.sqrt(1/N * np.sum((y - mean)**2))
         print(f'rms = {rms}')
         snr = y / rms
@@ -693,12 +765,12 @@ class LightCone:
     def find_peaks(self, y, thresh):
         coords = peak_local_max(
             y,
-            min_distance=10,    # minimum separation in pixels
+            min_distance=1,    # minimum separation in pixels
             threshold_abs=thresh, # minimum value for detection
             num_peaks=5000        # max number of peaks to return
         )
 
         # Extract values at those coordinates
         peak_vals = y[coords[:, 0], coords[:, 1]]
-        print(f'peaks = {peak_vals}')
+#        print(f'peaks = {peak_vals}')
         return coords, peak_vals

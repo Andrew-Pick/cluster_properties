@@ -954,6 +954,7 @@ class Scaling_Relation:
         for (mid,m) in enumerate(self.models):
             ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
             ldmass = ld.M500
+            print(f'Minimum mass = {np.min(ldmass)}')
             mass = ldmass # /0.6774
             if self.property == "T":
                 prop = ld.mass_T500_with_core
@@ -1046,11 +1047,11 @@ class Scaling_Relation:
                 median_props1.append(median_prop1)
                 median_props_rescaled1.append(median_prop_rescaled1)
     
-        ax.set_xlim([13.3, 15.4])
+        ax.set_xlim([13.16, 15.4])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_xticklabels(r'')
-        ax.set_xticks(np.arange(13,15.4,0.5))
+        ax.set_xticks(np.arange(13.5,15.4,0.5))
 
         if self.property == "T":
             ax.set_ylim([-0.75, 1.25])
@@ -1160,11 +1161,11 @@ class Scaling_Relation:
                 if mid == 1:
                     ax.plot(mean_log_mass, np.linspace(0,0, len(mean_log_mass)), linewidth=self.lw, linestyle='-', color='black')
 
-        ax.set_xlim([13.3, 15.4])
+        ax.set_xlim([13.16, 15.4])
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_xticklabels(r'')
-        ax.set_xticks(np.arange(13,15.4,1))
+        ax.set_xticks(np.arange(13.5,15.4,1))
 
         if self.property == "T":
             ax.set_ylim([-0.2, 0.8])
@@ -1192,7 +1193,7 @@ class Scaling_Relation:
         ax.yaxis.set_tick_params(width=1.5)
         ax.legend(loc='lower right', fontsize=self.legsize, frameon=False)
 
-        ax.set_xticklabels([r'$13$',r'$14$',r'$15$'],fontsize=self.axsize)
+        ax.set_xticklabels([r'$14$',r'$15$'],fontsize=self.axsize)
 #        ax.set_yticklabels([r'',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$'],fontsize=self.axsize)  
         
         ax.set_ylabel(r'$\Delta T_{\mathrm{gas}} / T_{\mathrm{gas,GR}}$', fontsize=self.axsize)
