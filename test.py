@@ -765,9 +765,9 @@ class LightCone:
     def find_peaks(self, y, thresh):
         coords = peak_local_max(
             y,
-            min_distance=1,    # minimum separation in pixels
+            min_distance=2,    # minimum separation in pixels
             threshold_abs=thresh, # minimum value for detection
-            num_peaks=5000        # max number of peaks to return
+            num_peaks=1000000        # max number of peaks to return
         )
 
         # Extract values at those coordinates

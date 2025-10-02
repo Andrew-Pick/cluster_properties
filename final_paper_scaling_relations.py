@@ -856,6 +856,8 @@ class Scaling_Relation:
             self.rshift = 0.5
         elif self.snapshot == 21:
             self.rshift = 0.0
+        elif self.snapshot == 6:
+            self.rshift = 1.0
 
         # load snapshot
 #       if simulation == "L302_N1136":
@@ -954,7 +956,8 @@ class Scaling_Relation:
         for (mid,m) in enumerate(self.models):
             ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
             ldmass = ld.M500
-            print(f'Minimum mass = {np.min(ldmass)}')
+            print(f'Number of masses = {ldmass.shape}')
+            print(f'Number of zero masses = {np.count_nonzero(ldmass == 0)}')
             mass = ldmass # /0.6774
             if self.property == "T":
                 prop = ld.mass_T500_with_core
@@ -968,6 +971,7 @@ class Scaling_Relation:
             elif self.property == "Lx":
                 prop = ld.Lx_with_core
                 prop1 = ld.Lx_no_core
+            print(f'prop1 = {prop1}')
             prop_rescaled_list=[]
             prop_rescaled_list1=[]
             for i, p in zip(mass, prop):
@@ -986,9 +990,15 @@ class Scaling_Relation:
                 else:
                     p_rescaled1 = p
                 prop_rescaled_list1.append(p_rescaled1)
-            prop_rescaled1 = np.array(prop_rescaled_list1)   
-            
-            bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
+            prop_rescaled1 = np.array(prop_rescaled_list1)
+
+            if self.snapshot == 21:
+                bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
+            elif self.snapshot == 12:
+                bins = np.logspace(np.log10(1.e13), 15.4, 8, base=10.0)
+            elif self.snapshot == 6:
+                bins = np.logspace(np.log10(1.e13), 15.4, 7, base=10.0)
+
             digitized = np.digitize(mass, bins)
             logmass=np.log10(mass)
             logprop=np.log10(prop)
@@ -1131,8 +1141,13 @@ class Scaling_Relation:
                     prop_rescaled_list1.append(p_rescaled1)
                 prop_rescaled1 = np.array(prop_rescaled_list1) 
                 
-                
-                bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
+                if self.snapshot == 21:
+                    bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
+                elif self.snapshot == 12:
+                    bins = np.logspace(np.log10(1.e13), 15.4, 8, base=10.0)
+                elif self.snapshot == 6:
+                    bins = np.logspace(np.log10(1.e13), 15.4, 7, base=10.0)
+
                 digitized = np.digitize(mass, bins)
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
                 size_mask = self.size_gr >= 3
@@ -1165,7 +1180,7 @@ class Scaling_Relation:
         ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
         ax.set_yticklabels(r'')
         ax.set_xticklabels(r'')
-        ax.set_xticks(np.arange(13.5,15.4,1))
+        ax.set_xticks(np.arange(14,15.4,1))
 
         if self.property == "T":
             ax.set_ylim([-0.2, 0.8])
