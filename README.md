@@ -47,9 +47,6 @@ scipy
 matplotlib
 h5py
 astropy
-
-# Additional requirements
-pickle (standard library)
 ```
 
 ### Setup
@@ -202,7 +199,7 @@ The code supports various simulation suites including:
 
 The code uses the following units and conventions:
 
-- **Masses**: Solar masses (M☉)
+- **Masses**: Solar masses (M_sun)
 - **Distances**: Kiloparsecs (kpc) and Megaparsecs (Mpc)
 - **Temperatures**: Kilo-electron volts (keV)
 - **Hydrogen mass fraction**: X_H = 0.76
@@ -252,7 +249,10 @@ cluster_properties/
 ## Notes
 
 - The code is designed to run on high-performance computing systems with access to large simulation datasets
-- File paths are hardcoded for specific computing systems (COSMA) and may need adjustment for local use
+- File paths are hardcoded for specific computing systems (COSMA) and may need adjustment for local use. Key files with hardcoded paths include:
+  - `cluster_properties.py`: Contains paths to simulation data directories in the `FindData.get_data_path()` method and the `ClusterProperties.__init__()` method
+  - `mock_SZ_map.py`: Contains paths to snapshot directories in the `find_snapshot_near()` function
+  - Individual modules may have additional hardcoded paths that need to be updated for your system
 - Many functions assume specific simulation box sizes and cosmological parameters
 
 ## Author
