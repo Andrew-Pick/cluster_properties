@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 from skimage.feature import peak_local_max
 from numba import njit, prange
+import sys
 
 #np.random.seed(1273)
 
@@ -149,7 +150,7 @@ class LightCone:
             (P_e, box_size_com, grid_N) = pickle.load(df)
             return P_e, box_size_com, grid_N
         else:
-            print("%s does not exist!" % (group_dumpfile))
+            print("%s does not exist!" % (pressure_dumpfile))
             sys.exit(0)
 
     def load_cluster_data(self, snap):
@@ -365,7 +366,7 @@ class LightCone:
                 theta_x = theta_x[fov_mask]
                 theta_y = theta_y[fov_mask]
                 z = z[fov_mask]
-                mass = M200[fov_mask]
+                mass = M500[fov_mask]
 
                 # Convert to pixel coordinates
                 x_pix = ((theta_x + self.fov_rad/2) * pixel_scale).astype(int)
@@ -393,7 +394,7 @@ class LightCone:
                        if z0 + partial_thickness <= Lbox else \
                        ((zpos >= z0) | (zpos < (z0 + partial_thickness - Lbox)))
                 pos_partial = pos[zsel]
-                mass_partial = M200[zsel]
+                mass_partial = M500[zsel]
 
                 x = pos_partial[:,0]
                 y = pos_partial[:,1]

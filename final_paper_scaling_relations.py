@@ -955,22 +955,23 @@ class Scaling_Relation:
 
         for (mid,m) in enumerate(self.models):
             ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
-            ldmass = ld.M500
+            mass_cut = ld.M500 > 10**13.16
+            ldmass = ld.M500[mass_cut]
             print(f'Number of masses = {ldmass.shape}')
             print(f'Number of zero masses = {np.count_nonzero(ldmass == 0)}')
             mass = ldmass # /0.6774
             if self.property == "T":
-                prop = ld.mass_T500_with_core
-                prop1 = ld.mass_T500  # prop1 refers to properties excluding the core region of clusters
+                prop = ld.mass_T500_with_core[mass_cut]
+                prop1 = ld.mass_T500[mass_cut]  # prop1 refers to properties excluding the core region of clusters
             elif self.property == "SZ":
-                prop = ld.Ysz_with_core
-                prop1 = ld.Ysz_no_core
+                prop = ld.Ysz_with_core[mass_cut]
+                prop1 = ld.Ysz_no_core[mass_cut]
             elif self.property == "Yx":
-                prop = ld.Mg500 * ld.mass_T500_with_core
-                prop1 = ld.Mg500 * ld.mass_T500
+                prop = ld.Mg500[mass_cut] * ld.mass_T500_with_core[mass_cut]
+                prop1 = ld.Mg500[mass_cut] * ld.mass_T500[mass_cut]
             elif self.property == "Lx":
-                prop = ld.Lx_with_core
-                prop1 = ld.Lx_no_core
+                prop = ld.Lx_with_core[mass_cut]
+                prop1 = ld.Lx_no_core[mass_cut]
             print(f'prop1 = {prop1}')
             prop_rescaled_list=[]
             prop_rescaled_list1=[]
@@ -995,9 +996,9 @@ class Scaling_Relation:
             if self.snapshot == 21:
                 bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
             elif self.snapshot == 12:
-                bins = np.logspace(np.log10(1.e13), 15.4, 8, base=10.0)
+                bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
             elif self.snapshot == 6:
-                bins = np.logspace(np.log10(1.e13), 15.4, 7, base=10.0)
+                bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
 
             digitized = np.digitize(mass, bins)
             logmass=np.log10(mass)
@@ -1114,20 +1115,21 @@ class Scaling_Relation:
         for (mid, m) in enumerate(self.models):
             if m != "GR":  # Skip the GR model itself
                 ld = LoadDumpfile(self.dumpfiles[mid], self.subhalo_dumpfiles[mid])
-                ldmass = ld.M500
+                mass_cut = ld.M500 > 10**13.16
+                ldmass = ld.M500[mass_cut]
                 mass = ldmass # /0.6774
                 if self.property == "T":
-                    prop = ld.mass_T500_with_core
-                    prop1 = ld.mass_T500  # prop1 refers to properties excluding the core region of clusters
+                    prop = ld.mass_T500_with_core[mass_cut]
+                    prop1 = ld.mass_T500[mass_cut]  # prop1 refers to properties excluding the core region of clusters
                 elif self.property == "SZ":
-                    prop = ld.Ysz_with_core
-                    prop1 = ld.Ysz_no_core
+                    prop = ld.Ysz_with_core[mass_cut]
+                    prop1 = ld.Ysz_no_core[mass_cut]
                 elif self.property == "Yx":
-                    prop = ld.Mg500 * ld.mass_T500_with_core
-                    prop1 = ld.Mg500 * ld.mass_T500
+                    prop = ld.Mg500[mass_cut] * ld.mass_T500_with_core[mass_cut]
+                    prop1 = ld.Mg500[mass_cut] * ld.mass_T500[mass_cut]
                 elif self.property == "Lx":
-                    prop = ld.Lx_with_core
-                    prop1 = ld.Lx_no_core
+                    prop = ld.Lx_with_core[mass_cut]
+                    prop1 = ld.Lx_no_core[mass_cut]
                 prop_rescaled_list = []
                 prop_rescaled_list1 = []
                 for i, p in zip(mass, prop):
@@ -1144,13 +1146,13 @@ class Scaling_Relation:
                 if self.snapshot == 21:
                     bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
                 elif self.snapshot == 12:
-                    bins = np.logspace(np.log10(1.e13), 15.4, 8, base=10.0)
+                    bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
                 elif self.snapshot == 6:
-                    bins = np.logspace(np.log10(1.e13), 15.4, 7, base=10.0)
+                    bins = np.logspace(np.log10(1.e13), 15.4, 9, base=10.0)
 
                 digitized = np.digitize(mass, bins)
                 size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
-                size_mask = self.size_gr >= 3
+                size_mask = self.size_gr >= 2
                 # Calculate the ratio of the difference
                 median_prop_rescaled = np.array([float(np.median(prop_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
                 median_prop = np.array([float(np.median(prop[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
@@ -1214,5 +1216,227 @@ class Scaling_Relation:
         ax.set_ylabel(r'$\Delta T_{\mathrm{gas}} / T_{\mathrm{gas,GR}}$', fontsize=self.axsize)
         ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
 
+'''
+class xi_Scaling_Relation:
+    def __init__(self, simulation, models, realisations, file_ending, labels, colors, defaults, plot_name, system='cosma7', show_spread=False,core_frac=0.15):
+        self.simulation = simulation
+        self.models = models
+        self.realisations = realisations
+        self.file_ending = file_ending
+        self.labels = labels
+        self.colors = colors
+        self.defaults = defaults
+        self.plot_name = plot_name
+        self.system = system
+        self.show_spread = show_spread
+        self.core_frac = core_frac
+
+        if self.core_frac == 0.15:
+            self.core_label = ""
+        else:
+            self.core_label = "_%.2f" % (self.core_frac)
+
+        self.fileroot = "/cosma8/data/dp203/dc-pick1/Projects/Ongoing/Clusters/My_Data/%s/" % (simulation)
+        self.fileroot2 = "/cosma/home/dp203/dc-pick1/cluster_properties/plots/%s/" % (simulation)
+        self.dumpfiles = [self.fileroot+"%s/pickle_files/%s_%s_%s_s%d_%s%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending,self.core_label) for (mid, m) in enumerate(models)]
+        self.subhalo_dumpfiles = [self.fileroot+"%s/pickle_files/subhalo_%s_%s_%s_s%d_%s.pickle" % (m,simulation,m,realisations[mid],snapshot,file_ending) for (mid, m) in enumerate(models)]
+
+    def correction(self, truemass, model, redshift):
+        
+        p1=2.21
+        f_R0 = None
+        if model=="F5" or model=="F50":
+            f_R0 = 1e-5
+        elif model=="F6" or model=="F60":
+            f_R0 = 1e-6
+        elif model=="F55":
+            f_R0 = 10**(-5.5)
+        elif model=="F45":                                                                                                                                             
+            f_R0 = 10**(-4.5)
+        elif model=="F4" or model=="F40":
+            f_R0 = 10**(-4)
+        
+        if f_R0 is None:
+            raise ValueError(f"f_R0 not set for model {model}")
+
+        fR = f_R(f_R0, 1 / (1. + redshift), 0.3089, 0.6911)
+        p2 = 1.503 * np.log10(fR / (1. + redshift)) + 21.64  # 10^p2 units Msun/0.697
+            #   p2_rescaled = np.log10(10**p2 / 0.697)   # 10^p2' units Msun
+        return 7 / 6 - (1 / 6) * np.tanh(p1 * (np.log10(truemass) - p2))
+
+    def z0(self, ax, masses, xi, redshifts):
+        
+        self.median_prop_gr = None
+        self.mean_log_mass_gr = None
+
+        logmasses, logprops, mean_log_masses, median_props, median_props_rescaled = [], [], [], [], []
+
+        for (mid,m) in enumerate(self.models):
+            ldmass = ld.M500
+            print(f'Number of masses = {ldmass.shape}')
+            print(f'Number of zero masses = {np.count_nonzero(ldmass == 0)}')
+            mass = ldmass # /0.6774
+            prop =
+            print(f'prop = {prop}')
+            prop_rescaled_list=[]
+            for i, p in zip(mass, prop):
+                if m!= 'GR':
+                    massratio = self.correction(truemass=i, model=m, redshift=self.rshift)
+                    p_rescaled = p / massratio
+                else:
+                    p_rescaled = p
+                prop_rescaled_list.append(p_rescaled)
+            prop_rescaled = np.array(prop_rescaled_list)   
+            
+            bins = np.logspace(np.log10(1.e13), 15.4, 8, base=10.0)
+
+            digitized = np.digitize(mass, bins)
+            logmass=np.log10(mass)
+            logprop=np.log10(prop)
+            logprop_rescaled=np.log10(prop_rescaled)
+            
+            mean_log_mass = np.array([(float(np.mean(np.log10(mass[digitized == i])))) for i in range(1, len(bins))])   # units Msun
+            median_prop = np.array([float(np.median(np.log10(prop[digitized == i]))) for i in range(1, len(bins))])
+            median_prop_no_log = np.array([float(np.median(prop[digitized == i])) for i in range(1, len(bins))])
+            median_prop_rescaled = np.array([float(np.median(np.log10(prop_rescaled[digitized == i]))) for i in range(1, len(bins))]) 
+            
+            size = np.array([len(prop[digitized == i]) for i in range(1, len(bins))])
+            self.size_gr = np.array([len(prop[digitized == i]) for i in range(1, len(bins))])       
+            size_mask = size >= 2
+            mean_log_mass_main = mean_log_mass[size_mask]
+            median_prop_main = median_prop[size_mask]
+            median_prop_rescaled_main = median_prop_rescaled[size_mask]
+
+            # handle sparse high-mass bins separately
+            if np.any(~size_mask):  # there are sparse bins
+                high_mass_mask = ~size_mask
+                combined_mass = np.mean([np.mean(np.log10(mass[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+                combined_prop = np.mean([np.median(np.log10(prop[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+                combined_prop_rescaled = np.mean([np.median(np.log10(prop_rescaled[digitized == i])) for i in range(1, len(bins)) if high_mass_mask[i-1]])
+
+            	# append as a single extra high-mass point
+                mean_log_mass_main = np.append(mean_log_mass_main, combined_mass)
+                median_prop_main = np.append(median_prop_main, combined_prop)
+                median_prop_rescaled_main = np.append(median_prop_rescaled_main, combined_prop_rescaled)
+
+            if m == "GR":
+                self.median_prop_gr = median_prop_no_log
+                self.mean_log_mass_gr = mean_log_mass
+#                ax.scatter(logmass,logprop, marker='o', s=0.8, color="darkgrey",alpha=0.4)
+#                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, color=self.colors[mid],label = 'GR with core')  
+                self.median_prop_gr = median_prop_no_log
+                self.mean_log_mass_gr = mean_log_mass
+                ax.scatter(logmass, logprop, marker='o', s=0.8, color="darkgrey",alpha=0.8)
+                ax.plot(mean_log_mass[size >= 2], median_prop[size >= 2], linewidth=self.lw, color=self.colors[mid],label = 'GR')
+                logmasses.append(logmass)
+                logprops.append(logprop)
+                mean_log_masses.append(mean_log_mass)
+                median_props.append(median_prop)
+            else:
+#                ax.plot(mean_log_mass[size >= 5], median_prop[size >= 5], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label =m+' with core',alpha=0.5)  
+#                ax.plot(mean_log_mass[size >= 5], median_prop_rescaled[size >= 5], linewidth=self.lw, color=self.colors[mid],label = m+' with core rescaled',alpha=0.5)
+                ax.plot(mean_log_mass[size >= 2], median_prop[size >= 2], linewidth=self.lw, linestyle='dotted', color=self.colors[mid],label = m)
+                ax.plot(mean_log_mass[size >= 2], median_prop_rescaled[size >= 2], linewidth=self.lw, linestyle='dashed',  color=self.colors[mid],label = m + ' rescaled') 
+                mean_log_masses.append(mean_log_mass)
+                median_props.append(median_prop)
+                median_props_rescaled.append(median_prop_rescaled)
+    
+        ax.set_xlim([13.16, 15.4])
+        ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
+        ax.set_yticklabels(r'')
+        ax.set_xticklabels(r'')
+        ax.set_xticks(np.arange(13.5,15.4,0.5))
+
+        ax.set_ylim([23, 29])
+        ax.set_yticks(np.arange(23,30,1))
+        ax.set_yticklabels([r'',r'$24$',r'$25$',r'$26$',r'$27$',r'$28$','$29$'],fontsize=self.axsize)
+        ax.set_ylabel(r'$\log_{10}(L_{X} \, [keV^{1/2}M^{2}_{\odot}Mpc^{-3}])$', fontsize=self.mysize, labelpad=10)
+
+        ax.xaxis.set_tick_params(width=1.5)
+        ax.yaxis.set_tick_params(width=1.5)
+        ax.legend(loc='lower right', fontsize=self.legsize, frameon=False)
+
+#        ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
+#        ax.set_ylabel('$\log_{10}(\overline{T}_{gas} \, [keV])$', fontsize=self.mysize)
 
 
+        offset_x_fraction = 0.05  # Horizontal offset
+        offset_y_fraction = 0.05  # Vertical offset
+
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+
+# Apply the offset to the axis limits
+        title_x = xlim[0] + (xlim[1] - xlim[0]) * offset_x_fraction
+        title_y = ylim[1] - (ylim[1] - ylim[0]) * offset_y_fraction
+
+        ax.text(title_x,title_y,rf'$\mathit{{z}} = {self.rshift:.1f}$',fontsize=self.mysize,ha='left', va='top')
+ #       plt.tight_layout()
+
+        #return logmasses, logprops1, mean_log_masses, median_props1, median_props_rescaled1
+    
+    def z0_subplot(self, ax):
+        if self.median_prop_gr is None or self.size_gr is None:
+            raise ValueError("GR data has not been processed yet.")
+
+        for (mid, m) in enumerate(self.models):
+            if m != "GR":  # Skip the GR model itself
+                ldmass = ld.M500
+                mass = ldmass # /0.6774
+                prop =
+                prop_rescaled_list = []
+                for i, p in zip(mass, prop):
+                    massratio = self.correction(truemass=i, model=m, redshift=?)
+                    p_rescaled = p / massratio
+                    prop_rescaled_list.append(p_rescaled)
+                prop_rescaled = np.array(prop_rescaled_list) 
+                
+                bins = np.logspace(np.log10(1.e13), 15.4, 8, base=10.0)
+
+                digitized = np.digitize(mass, bins)
+                size = np.array([len(mass[digitized == i]) for i in range(1, len(bins))])
+                size_mask = self.size_gr >= 3
+                # Calculate the ratio of the difference
+                median_prop_rescaled = np.array([float(np.median(prop_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
+                median_prop = np.array([float(np.median(prop[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
+                median_prop_rescaled = np.array([float(np.median(prop_rescaled[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]])
+                median_prop = np.array([float(np.median(prop[digitized == i])) for i in range(1, len(bins))if size_mask[i-1]]) 
+                mean_log_mass = np.array([float(np.mean(np.log10(mass[digitized == i]))) for i in range(1, len(bins)) if size_mask[i-1]])
+                median_prop_gr_filtered = self.median_prop_gr[size_mask]
+
+                if len(median_prop_rescaled) != len(median_prop_gr_filtered):
+                    raise ValueError(f"Array length mismatch: {len(median_prop_rescaled)} vs {len(median_prop_gr_filtered)}")
+ 
+                ratio_diff_rescaled = (median_prop_rescaled - median_prop_gr_filtered) / median_prop_gr_filtered
+                ratio_diff = (median_prop - median_prop_gr_filtered) / median_prop_gr_filtered
+                # Plot the ratio differences
+#               ax.plot(mean_log_mass, ratio_diff_rescaled,linewidth=self.lw,  color=self.colors[mid],alpha=0.5)
+#               ax.plot(mean_log_mass, ratio_diff, linewidth=self.lw, linestyle='dotted', color=self.colors[mid],alpha=0.5)  
+                ax.plot(mean_log_mass, ratio_diff_rescaled,linewidth=self.lw, linestyle='dashed', color=self.colors[mid])
+                ax.plot(mean_log_mass, ratio_diff, linewidth=self.lw, linestyle='dotted', color=self.colors[mid])
+
+                if mid == 1:
+                    ax.plot(mean_log_mass, np.linspace(0,0, len(mean_log_mass)), linewidth=self.lw, linestyle='-', color='black')
+
+        ax.set_xlim([13.16, 15.4])
+        ax.tick_params(direction='in', width=1, top=True, right=True, which='both')
+        ax.set_yticklabels(r'')
+        ax.set_xticklabels(r'')
+        ax.set_xticks(np.arange(14,15.4,1))
+
+        ax.set_ylim([-0.4, 0.8])
+        ax.set_yticks(np.arange(-0.4,0.8,0.2))
+        ax.set_yticklabels([r'',r'$-0.2$',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$',r''],fontsize=self.axsize)
+        ax.set_ylabel(r'$\Delta L_{X} / L_{X,GR}$', fontsize=self.axsize, labelpad=10)
+        ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
+        
+        ax.xaxis.set_tick_params(width=1.5)
+        ax.yaxis.set_tick_params(width=1.5)
+        ax.legend(loc='lower right', fontsize=self.legsize, frameon=False)
+
+        ax.set_xticklabels([r'$14$',r'$15$'],fontsize=self.axsize)
+#        ax.set_yticklabels([r'',r'$0.0$',r'$0.2$',r'$0.4$',r'$0.6$'],fontsize=self.axsize)  
+        
+        ax.set_ylabel(r'$\Delta T_{\mathrm{gas}} / T_{\mathrm{gas,GR}}$', fontsize=self.axsize)
+        ax.set_xlabel(r'$\log_{10}(M_{500} \ [M_{\odot}])$', fontsize=self.mysize)
+'''
